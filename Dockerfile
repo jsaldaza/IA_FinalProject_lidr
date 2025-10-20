@@ -12,15 +12,17 @@ WORKDIR /app
 # STRATEGY: Copiar TODO y luego entrar al subdirectorio
 COPY . ./
 
-# Verificar estructura con más detalle
-RUN echo "=== ESTRUCTURA COMPLETA ===" && \
+# DEBUGGING EXTREMO: Verificar QUÉ SE COPIÓ EXACTAMENTE
+RUN echo "=== DEBUGGING EXTREMO - QUÉ SE COPIÓ ===" && \
     ls -la && \
-    echo "=== VERIFICANDO SALDAZIA-BACKEND EXISTE ===" && \
-    find . -name "*Saldazia*" -type d && \
-    echo "=== VERIFICANDO PERMISOS ===" && \
-    ls -ld Saldazia-backend 2>/dev/null || echo "Directory access issue" && \
-    echo "=== CONTENIDO DIRECTO ===" && \
-    [ -d "Saldazia-backend" ] && echo "Directory exists" || echo "Directory missing"
+    echo "=== BUSCANDO DIRECTORIOS SALDAZIA ===" && \
+    find . -type d -name "*ald*" && \
+    echo "=== ARCHIVOS EN ROOT ===" && \
+    ls -1 | grep -i sald || echo "No hay archivos con 'sald'" && \
+    echo "=== VERIFICANDO CON TREE (si está disponible) ===" && \
+    (which tree && tree -L 2) || echo "tree no disponible" && \
+    echo "=== CONTENIDO DE . (COMPLETO) ===" && \
+    find . -maxdepth 2 -type d | head -20
 
 # Entrar al directorio del backend con verificación robusta
 RUN echo "=== INTENTANDO ACCEDER AL BACKEND ===" && \
