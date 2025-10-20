@@ -1,5 +1,7 @@
-# Exclude frontend and unnecessary folders
+# Exclude frontend (we only need backend)
 Saldazia-frontend/
+
+# Exclude development folders
 scripts/
 test/
 tools/
@@ -15,9 +17,12 @@ docs/
 .DS_Store
 Thumbs.db
 
-# Exclude logs
+# Exclude logs and temporary files
 *.log
 logs/
+node_modules/
+*.tmp
+*.temp
 
-# Keep Saldazia-backend/ - DON'T exclude it!
-# The backend folder must be included for Docker build
+# IMPORTANT: Keep Saldazia-backend/ 
+# This strategy copies everything and then works inside Saldazia-backend
