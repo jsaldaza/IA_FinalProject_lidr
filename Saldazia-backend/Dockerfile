@@ -1,21 +1,21 @@
-# 🐳 Dockerfile para Backend Node.js + TypeScript
-FROM node:18-alpine AS builder
+# 🐳 Dockerfile optimizado para Railway
+FROM node:18-alpine
 
-# Instalar dependencias del sistema
-RUN apk add --no-cache libc6-compat
+# Instalar dependencias del sistema necesarias
+RUN apk add --no-cache python3 make g++
 
 # Configurar directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración
+# Copiar archivos de configuración primero
 COPY package*.json ./
 COPY tsconfig*.json ./
+
+# Instalar todas las dependencias (dev y production)
+RUN npm ci
+
+# Copiar prisma y generar cliente
 COPY prisma ./prisma/
-
-# Instalar dependencias
-RUN npm ci --only=production && npm cache clean --force
-
-# Generar cliente Prisma
 RUN npx prisma generate
 
 # Copiar código fuente
@@ -24,35 +24,18 @@ COPY src ./src
 # Compilar TypeScript
 RUN npm run build
 
-# 🏗️ Imagen de producción
-FROM node:18-alpine AS production
+# Limpiar dependencias dev después del build
+RUN npm ci --only=production && npm cache clean --force
 
-# Crear usuario no-root para seguridad
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 testforge
+# Exponer el puerto que Railway va a usar
+EXPOSE $PORT
 
-# Configurar directorio de trabajo
-WORKDIR /app
-
-# Copiar dependencias y build desde la imagen builder
-COPY --from=builder --chown=testforge:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=testforge:nodejs /app/dist ./dist
-COPY --from=builder --chown=testforge:nodejs /app/package*.json ./
-COPY --from=builder --chown=testforge:nodejs /app/prisma ./prisma
-
-# Cambiar al usuario no-root
-USER testforge
-
-# Exponer puerto
-EXPOSE 3000
-
-# Variables de entorno de producción
+# Variables de entorno
 ENV NODE_ENV=production
-ENV PORT=3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+# Health check simple
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
 # Comando de inicio
-CMD ["node", "dist/server.js"]
+CMD ["npm", "start"]
