@@ -1,0 +1,76 @@
+### TestForge Backend API Tests
+### Archivo de pruebas para VS Code REST Client extension
+
+# Variables
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYwMTZmNDI4LWFjZDMtNGZmYy1hYjE0LTUzNTUwZjRjZGU4ZSIsImVtYWlsIjoidGVzdEB0ZXN0Zm9yZ2UuY29tIiwiaWF0IjoxNzU1Mzc4NTkwLCJleHAiOjE3NTU0NjQ5OTB9.fFKI983Eud9NpqvTWvP7IJsZcbyPwR59MirU33K7uKc
+
+### 1. Test: Get all analyses
+GET {{baseUrl}}/api/analysis
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 2. Test: Get conversational analyses  
+GET {{baseUrl}}/api/conversational-analysis
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 3. Test: Register user
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@testforge.com",
+  "password": "password123",
+  "name": "Test User"
+}
+
+### 4. Test: Login user
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@testforge.com", 
+  "password": "password123"
+}
+
+### 5. Test: Get user workflows
+GET {{baseUrl}}/api/conversational-workflow/user/workflows
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 6. Test: Create conversational analysis
+POST {{baseUrl}}/api/conversational-analysis
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Test Analysis",
+  "description": "Análisis de prueba para verificar funcionamiento",
+  "epicContent": "Como usuario quiero poder registrarme en la aplicación para acceder a las funcionalidades"
+}
+
+### 7. Test: Create new workflow
+POST {{baseUrl}}/api/conversational-workflow
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Test Workflow",
+  "description": "Workflow de prueba",
+  "epicContent": "Épica de prueba para el workflow"
+}
+
+### 8. Test: Create analysis
+POST {{baseUrl}}/api/analysis
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Test Traditional Analysis",
+  "description": "Análisis tradicional de prueba para probar las APIs del sistema"
+}
+
+### 9. Test: Health check básico (root)
+GET {{baseUrl}}/
+Content-Type: application/json

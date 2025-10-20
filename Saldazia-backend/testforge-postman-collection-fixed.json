@@ -1,0 +1,1658 @@
+{
+  "info": {
+    "name": "TestForge API - Generated",
+    "_postman_id": "b6f4a8d4-0000-4000-8000-000000000000",
+    "description": "Colección generada automáticamente con las rutas del backend. Usa un Environment con variables: HOST, authToken, EMAIL, PASSWORD, NAME, PROJECT_ID, ANALYSIS_ID, CONVERSATIONAL_ID.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{HOST}}/health",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{EMAIL}}\",\n  \"password\": \"{{PASSWORD}}\",\n  \"name\": \"{{NAME}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/auth/register",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Parse response and set authToken in environment",
+              "var json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "var token = null;",
+              "if (json) {",
+              "  token = json.token || (json.data && (json.data.token || json.data.accessToken)) || json.accessToken || json.access_token;",
+              "}",
+              "if (token) {",
+              "  pm.environment.set('authToken', token);",
+              "  console.log('authToken saved to environment');",
+              "} else {",
+              "  console.log('No token found in response:', json);",
+              "}",
+              "pm.test('Login response status is 2xx', function () { pm.response.to.be.success; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{EMAIL}}\",\n  \"password\": \"{{PASSWORD}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/auth/login",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth - Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// On logout, remove authToken from environment",
+              "pm.environment.unset('authToken');",
+              "pm.test('Logout called', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/auth/logout",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth - Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/auth/profile",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "auth",
+            "profile"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard - Stats",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/dashboard/stats",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "dashboard",
+            "stats"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard - Activity",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/dashboard/activity",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "dashboard",
+            "activity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard - Recent Projects",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/dashboard/recent-projects",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "dashboard",
+            "recent-projects"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Nuevo proyecto\",\n  \"description\": \"Descripción de prueba\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/projects",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Create and Start",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Crear y empezar\",\n  \"description\": \"Inicio rápido\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/projects/create-and-start",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "create-and-start"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - In Progress",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/projects/in-progress",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "in-progress"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Completed",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/projects/completed",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "completed"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Get All",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/projects",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/projects/{{PROJECT_ID}}/status",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "{{PROJECT_ID}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Chat",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Hola IA\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/projects/{{PROJECT_ID}}/chat",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "{{PROJECT_ID}}",
+            "chat"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Complete",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/projects/{{PROJECT_ID}}/complete",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "{{PROJECT_ID}}",
+            "complete"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Projects - Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/projects/{{PROJECT_ID}}",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "projects",
+            "{{PROJECT_ID}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requirement\": \"Mi requerimiento a analizar\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/analysis",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Get By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Patch",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"summary\": \"Resumen actualizado\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Questions (GET)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}/questions",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}",
+            "questions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Generate Questions",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}/questions",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}",
+            "questions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Strategy",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}/strategy",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}",
+            "strategy"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Scenarios",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}/scenarios",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}",
+            "scenarios"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Refine",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"answers\": [] }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}/refine",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}",
+            "refine"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Save Answers",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"answers\": [] }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/analysis/{{ANALYSIS_ID}}/answers",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "{{ANALYSIS_ID}}",
+            "answers"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Project Metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/analysis/projects/{{PROJECT_ID}}/metrics",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "projects",
+            "{{PROJECT_ID}}",
+            "metrics"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Project Trends",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/analysis/projects/{{PROJECT_ID}}/trends?period=week",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "projects",
+            "{{PROJECT_ID}}",
+            "trends?period=week"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analysis - Project Reports",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/analysis/projects/{{PROJECT_ID}}/reports?page=1&limit=10",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "analysis",
+            "projects",
+            "{{PROJECT_ID}}",
+            "reports?page=1&limit=10"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test Cases - Generate",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"projectId\": \"{{PROJECT_ID}}\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/test-cases/generate",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "test-cases",
+            "generate"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test Cases - List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/test-cases",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "test-cases"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test Cases - Get",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/test-cases/{{ANALYSIS_ID}}",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "test-cases",
+            "{{ANALYSIS_ID}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test Cases - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"title\": \"Caso 1\", \"steps\": [] }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/test-cases",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "test-cases"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test Cases - Update",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"title\": \"Caso actualizado\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/test-cases/{{ANALYSIS_ID}}",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "test-cases",
+            "{{ANALYSIS_ID}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test Cases - Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/test-cases/{{ANALYSIS_ID}}",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "test-cases",
+            "{{ANALYSIS_ID}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - User Workflows",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/user/workflows",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "user",
+            "workflows"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - In Progress",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/user/in-progress",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "user",
+            "in-progress"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Completed",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/user/completed",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "user",
+            "completed"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"title\": \"Nuevo workflow\", \"description\": \"Descripción\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Create and Start",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"title\": \"Crear y empezar\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/create-and-start",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "create-and-start"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/status",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Chat",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"message\": \"Hola IA\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/chat",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "chat"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Summit GET",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/summit",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "summit"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Summit POST",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"summary\": \"Resumen final\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/summit",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "summit"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Summit PATCH",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"summary\": \"Resumen actualizado\" }",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/summit",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "summit"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Submit",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/submit",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "submit"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Advance",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/advance",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "advance"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Conversational Workflow - Reopen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/conversational-workflow/{{CONVERSATIONAL_ID}}/reopen",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "conversational-workflow",
+            "{{CONVERSATIONAL_ID}}",
+            "reopen"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cost Optimization - Stats",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/cost-optimization/stats",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "cost-optimization",
+            "stats"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cost Optimization - Suggestions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/cost-optimization/suggestions",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "cost-optimization",
+            "suggestions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cost Optimization - Clear Cache",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/cost-optimization/clear-cache",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "cost-optimization",
+            "clear-cache"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cost Optimization - Daily Report",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{authToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{HOST}}/api/cost-optimization/daily-report",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "cost-optimization",
+            "daily-report"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cost Optimization - Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{HOST}}/api/cost-optimization/health",
+          "protocol": "http",
+          "host": [
+            "{{HOSTNAME}}"
+          ],
+          "port": "{{HOST_PORT}}",
+          "path": [
+            "api",
+            "cost-optimization",
+            "health"
+          ]
+        }
+      }
+    }
+  ],
+  "event": [],
+  "variable": []
+}

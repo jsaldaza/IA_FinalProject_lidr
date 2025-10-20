@@ -1,0 +1,66 @@
+name: 🩺 Health Check
+
+on:
+  schedule:
+    # Ejecuta cada hora durante horas laborales (UTC)
+    - cron: "0 8-20 * * 1-5"
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  health-check:
+    name: 🔍 Check Application Health
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🏥 Check Backend Health
+        run: |
+          echo "Checking backend health..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/health || echo "000")
+          if [ "$response" = "200" ]; then
+            echo "✅ Backend is healthy (HTTP $response)"
+          else
+            echo "❌ Backend health check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: 🌐 Check Frontend
+        run: |
+          echo "Checking frontend accessibility..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.FRONTEND_URL }} || echo "000")
+          if [ "$response" = "200" ]; then
+            echo "✅ Frontend is accessible (HTTP $response)"
+          else
+            echo "❌ Frontend check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: 🗄️ Check Database Connectivity
+        run: |
+          echo "Checking database connectivity through API..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/db-test || echo "000")
+          if [ "$response" = "200" ]; then
+            echo "✅ Database is connected (HTTP $response)"
+          else
+            echo "❌ Database connectivity check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: 📊 Check API Documentation
+        run: |
+          echo "Checking API documentation..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/api-docs || echo "000")
+          if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
+            echo "✅ API docs are accessible (HTTP $response)"
+          else
+            echo "⚠️ API docs check returned (HTTP $response) - might be disabled in production"
+          fi
+
+      - name: 📝 Health Summary
+        if: always()
+        run: |
+          echo "🩺 Health Check Summary:"
+          echo "========================"
+          echo "Backend: ${{ secrets.BACKEND_URL }}"
+          echo "Frontend: ${{ secrets.FRONTEND_URL }}"
+          echo "Timestamp: $(date)"
+          echo "========================"

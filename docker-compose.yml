@@ -1,0 +1,155 @@
+# 🐳 Docker Compose para TestForge
+# ================================
+# Ejecuta la aplicación completa con un solo comando
+
+version: '3.8'
+
+services:
+  # 🗄️ MongoDB (Opcional - usar solo si no tienes Atlas)
+  mongodb:
+    image: mongo:7
+    container_name: testforge-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: testforge
+      MONGO_INITDB_ROOT_PASSWORD: testforge123
+      MONGO_INITDB_DATABASE: testforge
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - testforge-network
+    profiles:
+      - with-mongodb  # Solo se ejecuta si especificas: --profile with-mongodb
+
+  # 📊 Redis (Opcional - para caching)
+  redis:
+    image: redis:7-alpine
+    container_name: testforge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - testforge-network
+    profiles:
+      - with-redis  # Solo se ejecuta si especificas: --profile with-redis
+
+  # 🔧 Backend API
+  backend:
+    build:
+      context: ./Saldazia-backend
+      dockerfile: Dockerfile
+    container_name: testforge-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - CORS_ORIGIN=http://localhost:5173,http://localhost:80
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      # Logs persistentes
+      - ./Saldazia-backend/logs:/app/logs
+    networks:
+      - testforge-network
+    depends_on:
+      - mongodb
+      - redis
+    profiles:
+      - full-stack
+
+  # 🌐 Frontend
+  frontend:
+    build:
+      context: ./Saldazia-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:3000/api
+    container_name: testforge-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - testforge-network
+    depends_on:
+      - backend
+    profiles:
+      - full-stack
+
+  # 🩺 Health Check Service
+  healthcheck:
+    image: curlimages/curl:latest
+    container_name: testforge-healthcheck
+    networks:
+      - testforge-network
+    depends_on:
+      - backend
+      - frontend
+    profiles:
+      - monitoring
+    command: |
+      sh -c '
+        echo "🩺 Iniciando health check en 30 segundos..."
+        sleep 30
+        while true; do
+          echo "🔍 Verificando servicios..."
+          
+          # Check backend
+          if curl -f http://backend:3000/health >/dev/null 2>&1; then
+            echo "✅ Backend: OK"
+          else
+            echo "❌ Backend: FAIL"
+          fi
+          
+          # Check frontend
+          if curl -f http://frontend/health >/dev/null 2>&1; then
+            echo "✅ Frontend: OK"
+          else
+            echo "❌ Frontend: FAIL"
+          fi
+          
+          echo "⏳ Próximo check en 60 segundos..."
+          sleep 60
+        done
+      '
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  testforge-network:
+    driver: bridge
+
+# 📋 INSTRUCCIONES DE USO
+# =======================
+#
+# 🚀 Desarrollo completo (con MongoDB Atlas - recomendado):
+# docker-compose --profile full-stack up --build
+#
+# 🗄️ Con MongoDB local + Redis:
+# docker-compose --profile full-stack --profile with-mongodb --profile with-redis up --build
+#
+# 🩺 Con monitoreo:
+# docker-compose --profile full-stack --profile monitoring up --build
+#
+# 🛑 Detener todo:
+# docker-compose down
+#
+# 🧹 Limpiar volúmenes:
+# docker-compose down --volumes
+#
+# 📝 Variables de entorno requeridas (.env):
+# DATABASE_URL=mongodb+srv://user:pass@cluster.mongodb.net/testforge
+# JWT_SECRET=your-super-secret-jwt-key
+# OPENAI_API_KEY=sk-your-openai-key

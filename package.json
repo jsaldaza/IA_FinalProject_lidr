@@ -1,0 +1,84 @@
+{
+  "name": "testforge-ai",
+  "version": "1.0.0",
+  "description": "AI-Powered Testing Platform - Generate, manage and analyze test cases automatically using OpenAI GPT-4",
+  "private": true,
+  "workspaces": [
+    "Saldazia-backend",
+    "Saldazia-frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd Saldazia-backend && npm run dev",
+    "dev:frontend": "cd Saldazia-frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd Saldazia-backend && npm run build",
+    "build:frontend": "cd Saldazia-frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd Saldazia-backend && npm test",
+    "test:frontend": "cd Saldazia-frontend && npm run test:run",
+    "install:all": "npm install && npm run install:backend && npm run install:frontend",
+    "install:backend": "cd Saldazia-backend && npm install",
+    "install:frontend": "cd Saldazia-frontend && npm install",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd Saldazia-backend && rm -rf node_modules dist",
+    "clean:frontend": "cd Saldazia-frontend && rm -rf node_modules dist",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose --profile full-stack up",
+    "docker:down": "docker-compose down",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd Saldazia-backend && npm run lint",
+    "lint:frontend": "cd Saldazia-frontend && npm run lint",
+    "postinstall": "husky install"
+  },
+  "keywords": [
+    "testing",
+    "ai",
+    "automation",
+    "openai",
+    "gpt-4",
+    "test-generation",
+    "typescript",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": {
+    "name": "Jorge Piilo",
+    "email": "tu-email@ejemplo.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/testforge-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/testforge-ai/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/testforge-ai#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,css,md}": [
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run test"
+    }
+  }
+}

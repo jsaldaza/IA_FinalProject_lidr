@@ -1,0 +1,345 @@
+// 🌟 TESTFORGE AI - SCHEMA MONGODB SIMPLE Y FUNCIONAL
+// ================================================
+// MongoDB Atlas optimizado para distribución y funcionamiento inmediato
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// 👤 USUARIOS
+model User {
+  id                     String                   @id @default(auto()) @map("_id") @db.ObjectId
+  email                  String                   @unique
+  password               String                   
+  name                   String                   @default("")
+  avatarUrl              String?                  
+  
+  // Metadata y auditoría
+  isActive               Boolean                  @default(true)
+  lastLoginAt           DateTime?
+  emailVerified         Boolean                  @default(false)
+  emailVerifiedAt       DateTime?
+  
+  // Timestamps automáticos
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  
+  // Relaciones
+  projects               Project[]
+  conversationalAnalyses ConversationalAnalysis[]
+  testCases              TestCase[]
+  aiUsageMetrics         AIUsageMetric[]
+  blacklistedTokens      BlacklistedToken[]
+  conversationHistories  ConversationHistory[]
+  analyses               Analysis[]
+  
+  @@map("users")
+}
+
+// 📋 PROYECTOS
+model Project {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  title           String        
+  description     String?       
+  slug            String?       @unique 
+  
+  // Configuración del proyecto
+  status          String        @default("ACTIVE") 
+  isArchived      Boolean       @default(false)
+  isPublic        Boolean       @default(false) 
+  analysisEnabled Boolean       @default(true)
+  
+  // Metadata
+  userId          String        @db.ObjectId
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Configuración específica 
+  settings        Json?         
+  tags            String[]      
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relaciones
+  analyses        Analysis[]
+  
+  @@map("projects")
+}
+
+// 🤖 ANÁLISIS CONVERSACIONAL
+model ConversationalAnalysis {
+  id           String                  @id @default(auto()) @map("_id") @db.ObjectId
+  title        String                  
+  description  String                  
+  epicContent  String                  
+  
+  // Estado y progreso
+  currentPhase String                  @default("ANALYSIS") 
+  status       String                  @default("IN_PROGRESS")
+  completeness Float                   @default(0.0) 
+  
+  // Metadata de procesamiento
+  estimatedDuration Int?               
+  actualDuration    Int?               
+  complexity        String            @default("MEDIUM")
+  
+  // Configuración de IA
+  aiModel          String              @default("gpt-4o-mini") 
+  tokenConsumption Int                 @default(0)
+  costEstimate     Float               @default(0.0) 
+  
+  // Usuario y relaciones
+  userId           String              @db.ObjectId
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  startedAt        DateTime?           
+  completedAt      DateTime?           
+  
+  // Relaciones
+  messages         ConversationalMessage[]
+  histories        ConversationHistory[]
+  testCases        TestCase[]
+  analysisSummit   AnalysisSummit?
+  
+  @@map("conversational_analyses")
+}
+
+// 💬 MENSAJES 
+model ConversationalMessage {
+  id          String                 @id @default(auto()) @map("_id") @db.ObjectId
+  content     String                 
+  role        String                 // USER, ASSISTANT, SYSTEM
+  messageType String                 @default("QUESTION")
+  category    QuestionCategory?
+  
+  // Metadata del mensaje
+  tokenCount  Int?                   
+  confidence  Float?                 
+  isImportant Boolean                @default(false)
+  
+  // Relaciones
+  analysisId  String                 @db.ObjectId
+  analysis    ConversationalAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime               @default(now())
+  
+  @@map("conversational_messages")
+}
+
+// 📊 RESUMEN DE ANÁLISIS
+model AnalysisSummit {
+  id                       String   @id @default(auto()) @map("_id") @db.ObjectId
+  conversationalAnalysisId String   @unique @db.ObjectId
+  
+  // Resultados estructurados (JSON nativo en MongoDB)
+  refinedRequirements      Json?
+  functionalAspects        Json?
+  nonFunctionalAspects     Json?
+  identifiedRisks          Json?
+  businessRules            Json?
+  acceptanceCriteria       Json?
+  suggestedTestCases       Json?
+  
+  // Métricas de calidad
+  completenessScore        Float?   @default(0.0) 
+  qualityScore            Float?   @default(0.0) 
+  riskLevel               String   @default("MEDIUM")
+  
+  // Timestamps
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  
+  // Relación
+  conversationalAnalysis   ConversationalAnalysis @relation(fields: [conversationalAnalysisId], references: [id], onDelete: Cascade)
+  
+  @@map("analysis_summits")
+}
+
+// 🧪 CASOS DE PRUEBA
+model TestCase {
+  id                       String                  @id @default(auto()) @map("_id") @db.ObjectId
+  title                    String                  
+  description              String                  
+  
+  // Configuración del test
+  priority                 String                  @default("MEDIUM")
+  category                 String                  @default("FUNCTIONAL")
+  estimatedDuration       Int?                    
+  
+  // Metadata de generación
+  generatedByAI            Boolean                 @default(false)
+  aiConfidence            Float?                  
+  reviewStatus            String                  @default("PENDING")
+  
+  // Relaciones
+  conversationalAnalysisId String                  @db.ObjectId
+  conversationalAnalysis   ConversationalAnalysis @relation(fields: [conversationalAnalysisId], references: [id], onDelete: Cascade)
+  
+  userId                   String                  @db.ObjectId
+  user                     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  
+  @@map("test_cases")
+}
+
+// 💰 MÉTRICAS DE IA
+model AIUsageMetric {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @db.ObjectId
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Detalles de la request
+  requestType      String   
+  model            String   
+  endpoint         String?  
+  
+  // Tokens y costos
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  estimatedCost    Float    
+  
+  // Metadata de rendimiento
+  responseTime     Int?     
+  success          Boolean  @default(true)
+  errorMessage     String?  
+  
+  // Timestamps
+  createdAt        DateTime @default(now())
+  
+  @@map("ai_usage_metrics")
+}
+
+// 🚫 TOKENS BLOQUEADOS
+model BlacklistedToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  tokenHash String   @unique 
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Metadata de bloqueo
+  reason    String   @default("LOGOUT")
+  expiresAt DateTime  
+  userAgent String?   
+  ipAddress String?   
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@map("blacklisted_tokens")
+}
+
+// 💬 HISTORIAL DE CONVERSACIONES
+model ConversationHistory {
+  id              String                  @id @default(auto()) @map("_id") @db.ObjectId
+  conversationKey String                  @unique 
+  messages        Json                    
+  
+  // Metadata de sesión
+  sessionDuration Int?                    
+  messageCount   Int                     @default(0)
+  
+  // Relaciones
+  analysisId      String?                 @db.ObjectId
+  analysis        ConversationalAnalysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  userId          String                  @db.ObjectId
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  lastUsed        DateTime                @default(now())
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  
+  @@map("conversation_histories")
+}
+
+// 📋 ANÁLISIS LEGACY
+model Analysis {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  requirement    String         
+  summary        String         
+  redFlags       String[]
+  status         String         @default("PENDING")
+  
+  // Relaciones
+  userId         String         @db.ObjectId
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId      String?        @db.ObjectId
+  project        Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  // Timestamps
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // Relaciones legacy
+  questions      Question[]
+  testStrategies TestStrategy[]
+  
+  @@map("analyses")
+}
+
+// ❓ PREGUNTAS
+model Question {
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  content    String       
+  type       String       @default("FUNCTIONAL")
+  priority   String       @default("MEDIUM")
+  answer     String?      
+  
+  // Relaciones
+  analysisId String       @db.ObjectId
+  analysis   Analysis     @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  
+  @@map("questions")
+}
+
+// 🎯 ESTRATEGIAS DE PRUEBA
+model TestStrategy {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String   
+  description String   
+  steps       Json
+  coverage    String[]
+  priority    String   @default("MEDIUM")
+  
+  // Relaciones
+  analysisId  String   @db.ObjectId
+  analysis    Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("test_strategies")
+}
+
+// 🏷️ ENUMS
+enum QuestionCategory {
+  FUNCTIONAL_REQUIREMENTS
+  NON_FUNCTIONAL_REQUIREMENTS
+  BUSINESS_RULES
+  USER_INTERFACE
+  DATA_HANDLING
+  INTEGRATION
+  SECURITY
+  PERFORMANCE
+  ERROR_HANDLING
+  ACCEPTANCE_CRITERIA
+}

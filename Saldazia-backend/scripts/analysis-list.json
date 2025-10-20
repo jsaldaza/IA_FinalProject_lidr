@@ -1,0 +1,29 @@
+[
+  {
+    "id": "13c20d66-1cc7-4cb1-a28f-cff50a7f4306",
+    "title": "Crear un proyecto para manejo de farmacia",
+    "status": "IN_PROGRESS",
+    "createdAt": "2025-09-07T02:24:00.420Z",
+    "updatedAt": "2025-09-07T02:24:39.005Z",
+    "totalMessages": 5,
+    "lastAssistantPreview": "### Análisis de la Épica Inicial \"Crear un proyecto para manejo de farmacia\":\n\n#### Potenciales ambigüedades, riesgos y casos límite:\n1. **Ambigüedades en el propósito:** ¿Se busca solo controlar las fechas de vencimiento o también garantiz"
+  },
+  {
+    "id": "4e6401bf-47ea-4bca-92a3-0ac8ff401c42",
+    "title": "Proyecto de prueba, no necesita analisis",
+    "status": "IN_PROGRESS",
+    "createdAt": "2025-09-07T02:02:21.881Z",
+    "updatedAt": "2025-09-07T02:02:21.881Z",
+    "totalMessages": 0,
+    "lastAssistantPreview": null
+  },
+  {
+    "id": "f4625e73-14bb-4561-8f35-975df8094505",
+    "title": "Create strategia",
+    "status": "COMPLETED",
+    "createdAt": "2025-09-07T01:28:46.532Z",
+    "updatedAt": "2025-09-07T02:02:03.194Z",
+    "totalMessages": 11,
+    "lastAssistantPreview": "**✅ Perfecto, ya hemos terminado. Dale en el botón terminado.**"
+  }
+]

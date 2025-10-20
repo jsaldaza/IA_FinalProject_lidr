@@ -1,0 +1,544 @@
+{
+  "info": {
+    "name": "TestForge - Health Checks & System Diagnostics",
+    "description": "Colección completa para verificar la salud del sistema después de las correcciones implementadas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "apiPrefix",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Checks",
+      "item": [
+        {
+          "name": "Basic Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verificación básica de que el servidor está funcionando"
+          },
+          "response": []
+        },
+        {
+          "name": "Detailed Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health/detailed",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "detailed"]
+            },
+            "description": "Health check completo: Base de datos, cache, event store, configuración"
+          },
+          "response": []
+        },
+        {
+          "name": "Configuration Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "config"]
+            },
+            "description": "Verificación de configuración del sistema (sin datos sensibles)"
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health/readiness",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "readiness"]
+            },
+            "description": "Readiness probe para Kubernetes/Docker"
+          },
+          "response": []
+        },
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health/liveness",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "liveness"]
+            },
+            "description": "Liveness probe para Kubernetes/Docker"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🧠 Conversational Analysis",
+      "item": [
+        {
+          "name": "Create Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sistema de Pagos E-commerce\",\n  \"description\": \"Análisis conversacional para implementar sistema de pagos seguro\",\n  \"epicContent\": \"Como usuario quiero realizar pagos de forma segura y rápida en la plataforma de e-commerce para completar mis compras con confianza.\",\n  \"projectId\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversational-analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-analysis"]
+            },
+            "description": "Crear nuevo análisis conversacional usando el servicio unificado"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Analysis by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversational-analysis/{{analysisId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-analysis", "{{analysisId}}"]
+            },
+            "description": "Obtener análisis específico con cache inteligente"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Message to Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Necesitamos soportar tarjetas de crédito, débito, PayPal y transferencias bancarias. El sistema debe cumplir con PCI DSS.\",\n  \"role\": \"USER\",\n  \"messageType\": \"ANSWER\",\n  \"category\": \"FUNCTIONAL_REQUIREMENTS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversational-analysis/{{analysisId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-analysis", "{{analysisId}}", "messages"]
+            },
+            "description": "Agregar mensaje con mapeo seguro de tipos"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Analysis Progress",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPhase\": \"STRATEGY\",\n  \"completeness\": 75,\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversational-analysis/{{analysisId}}/progress",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-analysis", "{{analysisId}}", "progress"]
+            },
+            "description": "Actualizar progreso con eventos persistentes"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Analyses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversational-analysis/user?page=1&limit=10&status=IN_PROGRESS",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-analysis", "user"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "IN_PROGRESS"
+                }
+              ]
+            },
+            "description": "Obtener análisis del usuario con paginación y cache"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Analysis Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversational-analysis/{{analysisId}}/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-analysis", "{{analysisId}}", "stats"]
+            },
+            "description": "Obtener estadísticas del análisis"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔄 Conversational Workflow",
+      "item": [
+        {
+          "name": "Start Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": null,\n  \"title\": \"Sistema de Notificaciones\",\n  \"description\": \"Implementar sistema de notificaciones en tiempo real\",\n  \"epicContent\": \"Como usuario quiero recibir notificaciones en tiempo real sobre eventos importantes en la plataforma para mantenerme informado.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversational-workflow/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-workflow", "start"]
+            },
+            "description": "Iniciar nueva conversación con persistencia unificada"
+          },
+          "response": []
+        },
+        {
+          "name": "Process User Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Las notificaciones deben soportar email, SMS, push notifications y notificaciones en la app. Deben ser configurables por el usuario.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversational-workflow/{{analysisId}}/message",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-workflow", "{{analysisId}}", "message"]
+            },
+            "description": "Procesar mensaje del usuario con IA"
+          },
+          "response": []
+        },
+        {
+          "name": "Advance to Next Phase",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversational-workflow/{{analysisId}}/advance",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-workflow", "{{analysisId}}", "advance"]
+            },
+            "description": "Avanzar a la siguiente fase del workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Workflows",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversational-workflow/user/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversational-workflow", "user", "workflows"]
+            },
+            "description": "Obtener workflows del usuario"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔐 Authentication & Users",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@testforge.com\",\n  \"password\": \"TestForge2024!\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Registrar nuevo usuario"
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@testforge.com\",\n  \"password\": \"TestForge2024!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Iniciar sesión y obtener token JWT"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Projects",
+      "item": [
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"E-Commerce Platform V2\",\n  \"description\": \"Nueva versión de la plataforma de comercio electrónico con mejoras en performance y seguridad\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            },
+            "description": "Crear nuevo proyecto"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            },
+            "description": "Obtener proyectos del usuario"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-generate IDs for testing if not set",
+          "if (!pm.variables.get('analysisId')) {",
+          "    pm.variables.set('analysisId', 'demo-analysis-1');",
+          "}",
+          "",
+          "if (!pm.variables.get('authToken')) {",
+          "    pm.variables.set('authToken', 'your-jwt-token-here');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-extract tokens and IDs from responses",
+          "if (pm.response.json() && pm.response.json().token) {",
+          "    pm.variables.set('authToken', pm.response.json().token);",
+          "}",
+          "",
+          "if (pm.response.json() && pm.response.json().data && pm.response.json().data.id) {",
+          "    pm.variables.set('analysisId', pm.response.json().data.id);",
+          "}",
+          "",
+          "// Basic response validation",
+          "pm.test('Response time is less than 2000ms', () => {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});",
+          "",
+          "pm.test('Response has correct content type', () => {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});"
+        ]
+      }
+    }
+  ]
+}
