@@ -1,33 +1,37 @@
-# 🐳 Dockerfile para Railway - Cache Bust v2
+# 🐳 Dockerfile para Railway - No Cache Strategy
 FROM node:18-slim
 
-# Instalar dependencias del sistema necesarias
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+# Evitar cache de Docker en Railway
+ARG BUILDKIT_INLINE_CACHE=0
+
+# Instalar dependencias del sistema
+RUN apt-get update && \
+    apt-get install -y python3 make g++ curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
 
 # Configurar directorio de trabajo
 WORKDIR /app
 
-# Primero copiar package.json para aprovechar cache de Docker
-COPY Saldazia-backend/package*.json ./
+# Copiar TODOS los archivos del backend de una vez
+COPY Saldazia-backend/ ./
+
+# Verificar que los archivos están presentes
+RUN ls -la && \
+    ls -la src/ && \
+    ls -la prisma/
 
 # Instalar dependencias
-RUN npm install
+RUN npm ci --production=false
 
-# Copiar prisma schema y generar cliente
-COPY Saldazia-backend/prisma ./prisma/
+# Generar cliente Prisma
 RUN npx prisma generate
-
-# Copiar tsconfig
-COPY Saldazia-backend/tsconfig*.json ./
-
-# Copiar código fuente
-COPY Saldazia-backend/src ./src/
 
 # Compilar TypeScript
 RUN npm run build
 
-# Limpiar cache
-RUN npm cache clean --force
+# Verificar que el build fue exitoso
+RUN ls -la dist/
 
 # Exponer el puerto que Railway va a usar
 EXPOSE $PORT
