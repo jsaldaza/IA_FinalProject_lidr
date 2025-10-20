@@ -1,39 +1,41 @@
-# 🐳 Dockerfile optimizado para Railway
-FROM node:18-alpine
+# 🐳 Dockerfile para Railway - Desde directorio backend
+FROM node:18-slim
 
-# Instalar dependencias del sistema necesarias
-RUN apk add --no-cache python3 make g++
+# Instalar dependencias del sistema
+RUN apt-get update && \
+    apt-get install -y python3 make g++ curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Configurar directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración primero
+# Copiar archivos de configuración
 COPY package*.json ./
 COPY tsconfig*.json ./
 
-# Instalar todas las dependencias (dev y production)
-RUN npm ci
+# Instalar dependencias
+RUN npm ci --production=false
 
 # Copiar prisma y generar cliente
-COPY prisma ./prisma/
+COPY prisma/ ./prisma/
 RUN npx prisma generate
 
 # Copiar código fuente
-COPY src ./src
+COPY src/ ./src/
 
 # Compilar TypeScript
 RUN npm run build
 
-# Limpiar dependencias dev después del build
-RUN npm ci --only=production && npm cache clean --force
+# Verificar build
+RUN ls -la dist/ || echo "No dist directory found"
 
-# Exponer el puerto que Railway va a usar
+# Exponer puerto
 EXPOSE $PORT
 
 # Variables de entorno
 ENV NODE_ENV=production
 
-# Health check simple
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
