@@ -1,4 +1,4 @@
-# 🐳 Dockerfile simplificado para Railway
+# 🐳 Dockerfile para Railway - Cache Bust v2
 FROM node:18-slim
 
 # Instalar dependencias del sistema necesarias
@@ -7,14 +7,21 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 # Configurar directorio de trabajo
 WORKDIR /app
 
-# Copiar todo el backend
-COPY Saldazia-backend/ ./
+# Primero copiar package.json para aprovechar cache de Docker
+COPY Saldazia-backend/package*.json ./
 
 # Instalar dependencias
 RUN npm install
 
-# Generar Prisma client
+# Copiar prisma schema y generar cliente
+COPY Saldazia-backend/prisma ./prisma/
 RUN npx prisma generate
+
+# Copiar tsconfig
+COPY Saldazia-backend/tsconfig*.json ./
+
+# Copiar código fuente
+COPY Saldazia-backend/src ./src/
 
 # Compilar TypeScript
 RUN npm run build
