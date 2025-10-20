@@ -1,6 +1,7 @@
 [build]
 builder = "dockerfile"
-dockerfilePath = "Saldazia-backend/Dockerfile"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["Saldazia-backend/**"]
 
 [deploy]
 startCommand = "npm start"

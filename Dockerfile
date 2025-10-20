@@ -13,6 +13,16 @@ RUN apt-get update && \
 # Configurar directorio de trabajo
 WORKDIR /app
 
+# Verificar contexto de build primero
+RUN echo "=== VERIFICANDO CONTEXTO DE BUILD ===" && \
+    pwd && \
+    echo "=== ARCHIVOS EN ROOT DEL BUILD ===" && \
+    ls -la /
+
+# Copiar archivos del backend con verificación
+RUN echo "=== VERIFICANDO SALDAZIA-BACKEND EXISTE ===" && \
+    ls -la | grep -i saldazia || echo "NO SE ENCUENTRA SALDAZIA-BACKEND"
+
 # Copiar TODOS los archivos del backend de una vez - CORRECTO: Saldazia-backend
 COPY Saldazia-backend/ ./
 
@@ -22,7 +32,9 @@ RUN echo "=== Verificando archivos copiados ===" && \
     echo "=== Contenido de src/ ===" && \
     ls -la src/ && \
     echo "=== Contenido de prisma/ ===" && \
-    ls -la prisma/
+    ls -la prisma/ && \
+    echo "=== Verificando package.json ===" && \
+    cat package.json | head -10
 
 # Instalar dependencias
 RUN npm ci --production=false
