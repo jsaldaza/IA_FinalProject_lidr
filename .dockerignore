@@ -1,5 +1,5 @@
 # Exclude frontend (we only need backend)
-Saldazia-frontend/
+frontend/
 
 # Exclude development folders
 scripts/
@@ -24,5 +24,5 @@ node_modules/
 *.tmp
 *.temp
 
-# IMPORTANT: Keep backend/ (renamed from Saldazia-backend)
+# IMPORTANT: Keep backend/ 
 # This strategy copies everything and then works inside backend

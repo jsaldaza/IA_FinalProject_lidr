@@ -1,7 +1,7 @@
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"
-watchPatterns = ["backend/**"]
+watchPatterns = ["backend/**", "frontend/**"]
 
 [deploy]
 startCommand = "npm start"
@@ -10,3 +10,7 @@ restartPolicyMaxRetries = 3
 
 [variables]
 NODE_ENV = "production"
+
+# Ensure Railway uses root directory, not a subdirectory
+[service]
+# Remove any root directory configuration
