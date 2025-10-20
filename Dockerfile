@@ -1,31 +1,26 @@
-# 🐳 Dockerfile optimizado para Railway
-FROM node:18-alpine
+# 🐳 Dockerfile simplificado para Railway
+FROM node:18-slim
 
 # Instalar dependencias del sistema necesarias
-RUN apk add --no-cache python3 make g++
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Configurar directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de configuración primero desde el backend
-COPY Saldazia-backend/package*.json ./
-COPY Saldazia-backend/tsconfig*.json ./
+# Copiar todo el backend
+COPY Saldazia-backend/ ./
 
-# Instalar todas las dependencias (dev y production)
-RUN npm ci
+# Instalar dependencias
+RUN npm install
 
-# Copiar prisma y generar cliente
-COPY Saldazia-backend/prisma ./prisma/
+# Generar Prisma client
 RUN npx prisma generate
-
-# Copiar código fuente del backend
-COPY Saldazia-backend/src ./src
 
 # Compilar TypeScript
 RUN npm run build
 
-# Limpiar dependencias dev después del build
-RUN npm ci --only=production && npm cache clean --force
+# Limpiar cache
+RUN npm cache clean --force
 
 # Exponer el puerto que Railway va a usar
 EXPOSE $PORT
