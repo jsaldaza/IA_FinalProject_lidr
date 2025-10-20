@@ -1,4 +1,4 @@
-# 🐳 Dockerfile para Railway - No Cache Strategy
+# 🐳 Dockerfile para Railway - No Cache Strategy v3
 FROM node:18-slim
 
 # Evitar cache de Docker en Railway
@@ -13,12 +13,15 @@ RUN apt-get update && \
 # Configurar directorio de trabajo
 WORKDIR /app
 
-# Copiar TODOS los archivos del backend de una vez
+# Copiar TODOS los archivos del backend de una vez - CORRECTO: Saldazia-backend
 COPY Saldazia-backend/ ./
 
 # Verificar que los archivos están presentes
-RUN ls -la && \
+RUN echo "=== Verificando archivos copiados ===" && \
+    ls -la && \
+    echo "=== Contenido de src/ ===" && \
     ls -la src/ && \
+    echo "=== Contenido de prisma/ ===" && \
     ls -la prisma/
 
 # Instalar dependencias
