@@ -15,10 +15,10 @@ COPY . ./
 # DEBUGGING EXTREMO: Verificar QUÉ SE COPIÓ EXACTAMENTE
 RUN echo "=== DEBUGGING EXTREMO - QUÉ SE COPIÓ ===" && \
     ls -la && \
-    echo "=== BUSCANDO DIRECTORIOS SALDAZIA ===" && \
-    find . -type d -name "*ald*" && \
+    echo "=== BUSCANDO DIRECTORIOS BACKEND ===" && \
+    find . -type d -name "*backend*" && \
     echo "=== ARCHIVOS EN ROOT ===" && \
-    ls -1 | grep -i sald || echo "No hay archivos con 'sald'" && \
+    ls -1 | grep -i backend || echo "No hay archivos con 'backend'" && \
     echo "=== VERIFICANDO CON TREE (si está disponible) ===" && \
     (which tree && tree -L 2) || echo "tree no disponible" && \
     echo "=== CONTENIDO DE . (COMPLETO) ===" && \
@@ -26,12 +26,12 @@ RUN echo "=== DEBUGGING EXTREMO - QUÉ SE COPIÓ ===" && \
 
 # Entrar al directorio del backend con verificación robusta
 RUN echo "=== INTENTANDO ACCEDER AL BACKEND ===" && \
-    cd Saldazia-backend && \
+    cd backend && \
     pwd && \
     echo "=== CONTENIDO DEL BACKEND ===" && \
     ls -la
 
-WORKDIR /app/Saldazia-backend
+WORKDIR /app/backend
 
 # Verificar que estamos en el lugar correcto
 RUN echo "=== VERIFICANDO CONTENIDO BACKEND FINAL ===" && \
