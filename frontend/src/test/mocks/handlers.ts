@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { Analysis, User, Project, ProjectMetrics } from '../../types/api'
+import type { Analysis, User, ProjectMetrics } from '../../types/api'
 
 // Mock data
 const mockUser: User = {
@@ -68,7 +68,7 @@ export const handlers = [
         })
     }),
 
-        http.get(`${BASE_URL}/api/auth/profile`, async ({ request }) => {
+        http.get(`${BASE_URL}/api/auth/profile`, async () => {
         return HttpResponse.json({ user: mockUser })
     }),
 

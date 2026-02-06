@@ -29,7 +29,7 @@ export function legacyBodyMapper(req: Request, _res: Response, next: NextFunctio
     next();
   } catch (err) {
     // Don't block request on compatibility middleware error, log and continue
-    // eslint-disable-next-line no-console
+     
     console.warn('legacyBodyMapper error:', err);
     next();
   }

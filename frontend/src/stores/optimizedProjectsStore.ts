@@ -300,7 +300,7 @@ export const projectSelectors = {
 
 // Performance hooks for components
 export const useOptimizedProjects = () => {
-  const projects = useProjectsStore((state) => 
+  const projects = useProjectsStore((_state) =>
     projectSelectors.filteredProjects()
   );
   const loading = useProjectsStore((state) => state.fetchState.loading);
