@@ -17,7 +17,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./Saldazia-backend
+        working-directory: ./backend
 
     steps:
       - name: 📥 Checkout code
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: ./Saldazia-backend/package-lock.json
+          cache-dependency-path: ./backend/package-lock.json
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -54,7 +54,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./Saldazia-frontend
+        working-directory: ./frontend
 
     steps:
       - name: 📥 Checkout code
@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: ./Saldazia-frontend/package-lock.json
+          cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -90,7 +90,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./Saldazia-backend
+        working-directory: ./backend
 
     steps:
       - name: 📥 Checkout code
@@ -100,7 +100,7 @@ jobs:
         uses: railwayapp/railway-deploy@v3
         with:
           service: testforge-backend
-          path: ./Saldazia-backend
+          path: ./backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
@@ -113,7 +113,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./Saldazia-frontend
+        working-directory: ./frontend
 
     steps:
       - name: 📥 Checkout code
@@ -124,7 +124,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: ./Saldazia-frontend/package-lock.json
+          cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -140,4 +140,4 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          working-directory: ./Saldazia-frontend
+          working-directory: ./frontend

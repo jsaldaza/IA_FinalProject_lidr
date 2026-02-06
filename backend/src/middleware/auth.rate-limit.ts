@@ -49,6 +49,10 @@ export const loginRateLimit = rateLimit({
 export const registerRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
   max: 3, // máximo 3 registros por IP por hora
+  skip: () => {
+    // In development allow registration without rate limiting
+    return process.env.NODE_ENV === 'development';
+  },
   message: {
     status: 'error',
     message: 'Demasiados intentos de registro. Intenta de nuevo en 1 hora.',
