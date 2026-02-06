@@ -40,7 +40,7 @@ services:
   # 🔧 Backend API
   backend:
     build:
-      context: ./Saldazia-backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: testforge-backend
     restart: unless-stopped
@@ -57,7 +57,7 @@ services:
       - REDIS_URL=redis://redis:6379
     volumes:
       # Logs persistentes
-      - ./Saldazia-backend/logs:/app/logs
+      - ./backend/logs:/app/logs
     networks:
       - testforge-network
     depends_on:
@@ -69,7 +69,7 @@ services:
   # 🌐 Frontend
   frontend:
     build:
-      context: ./Saldazia-frontend
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=http://localhost:3000/api

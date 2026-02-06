@@ -9,15 +9,23 @@ on:
 env:
   NODE_VERSION: "18"
 
-jobs:
-  # 🧪 Tests Backend
-  test-backend:
-    name: 🔧 Backend Tests
-    runs-on: ubuntu-latest
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
+  test-backend:
+    name: 🔧 Backend CI
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST != '' && secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET != '' && secrets.JWT_SECRET || 'test-jwt-secret-key-please-change-in-prod-123456' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY != '' && secrets.OPENAI_API_KEY || 'dummy-openai-key' }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL != '' && secrets.OPENAI_MODEL || 'gpt-3.5-turbo' }}
 
     steps:
       - name: 📥 Checkout code
@@ -27,34 +35,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: npm
           cache-dependency-path: ./backend/package-lock.json
 
       - name: 📦 Install dependencies
         run: npm ci
 
-      - name: 🔍 Lint code
-        run: npm run lint || echo "Linting completed with warnings"
+      - name: 🧬 Generate Prisma Client
+        run: npx prisma generate
 
-      - name: 🏗️ Build project
+      - name: 🔍 Lint
+        run: npm run lint
+
+      - name: 🧪 Tests
+        run: npm test -- --runInBand
+
+      - name: 🏗️ Build
         run: npm run build
 
-      - name: 🧪 Run tests
-        run: npm test
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          NODE_ENV: test
-
-  # 🧪 Tests Frontend
   test-frontend:
-    name: 🌐 Frontend Tests
+    name: 🌐 Frontend CI
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: ./frontend
+    env:
+      VITE_API_URL: ${{ secrets.VITE_API_URL_PROD != '' && secrets.VITE_API_URL_PROD || 'http://localhost:3000/api' }}
 
     steps:
       - name: 📥 Checkout code
@@ -64,30 +70,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: npm
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
         run: npm ci
 
-      - name: 🔍 Lint code
-        run: npm run lint || echo "Linting completed with warnings"
+      - name: 🔍 Lint
+        run: npm run lint
 
-      - name: 🧪 Run tests
+      - name: 🧪 Tests
         run: npm run test:run
 
-      - name: 🏗️ Build project
+      - name: 🏗️ Build
         run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
 
-  # 🚀 Deploy Backend
   deploy-backend:
-    name: 🚀 Deploy Backend to Railway
+    name: 🚂 Deploy Backend (Railway)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
+    if: github.ref == 'refs/heads/main' && secrets.RAILWAY_TOKEN != ''
     defaults:
       run:
         working-directory: ./backend
@@ -96,7 +98,7 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🚂 Deploy to Railway
+      - name: 🚀 Deploy to Railway
         uses: railwayapp/railway-deploy@v3
         with:
           service: testforge-backend
@@ -104,13 +106,11 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
-  # 🌐 Deploy Frontend
   deploy-frontend:
-    name: 🌐 Deploy Frontend to Vercel
+    name: 🌐 Deploy Frontend (Vercel)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
+    if: github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_PROJECT_ID != '' && secrets.VERCEL_ORG_ID != ''
     defaults:
       run:
         working-directory: ./frontend
@@ -123,7 +123,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: npm
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
@@ -132,7 +132,7 @@ jobs:
       - name: 🏗️ Build for production
         run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL_PROD || 'https://api.example.com' }}
 
       - name: 🚀 Deploy to Vercel
         uses: vercel/action@v1
