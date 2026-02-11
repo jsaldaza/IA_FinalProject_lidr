@@ -46,7 +46,7 @@ jobs:
           --health-retries 5
     defaults:
       run:
-        working-directory: ./backend
+        working-directory: backend
     env:
       NODE_ENV: test
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST != '' && secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
@@ -69,7 +69,7 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - name: 🧾 Prepare test environment file
-        working-directory: ./backend
+        working-directory: backend
         run: |
           cat <<'EOF' > .env.test
           NODE_ENV=test
@@ -82,23 +82,23 @@ jobs:
           EOF
 
       - name: 📦 Install dependencies
-        working-directory: ./backend
-        run: npm ci
+        working-directory: backend
+        run: npm ci --ignore-scripts
 
       - name: 🧬 Generate Prisma Client
-        working-directory: ./backend
+        working-directory: backend
         run: npx prisma generate
 
       - name: 🔍 Lint
-        working-directory: ./backend
+        working-directory: backend
         run: npm run lint
 
       - name: 🧪 Tests
-        working-directory: ./backend
+        working-directory: backend
         run: npm test -- --runInBand --passWithNoTests
 
       - name: 🏗️ Build
-        working-directory: ./backend
+        working-directory: backend
         run: npm run build
 
   test-frontend:
@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./frontend
+        working-directory: frontend
     env:
       VITE_API_URL: ${{ secrets.VITE_API_URL_PROD != '' && secrets.VITE_API_URL_PROD || 'http://localhost:3000/api' }}
 
@@ -122,20 +122,20 @@ jobs:
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
-        working-directory: ./frontend
-        run: npm ci
+        working-directory: frontend
+        run: npm ci --ignore-scripts
 
       - name: 🔍 Lint
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm run lint
 
       - name: 🧪 Tests
         if: env.RUN_FRONTEND_TESTS == 'true'
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm run test:run -- --passWithNoTests
 
       - name: 🏗️ Build
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm run build
 
   deploy-backend:
@@ -199,11 +199,11 @@ jobs:
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
-        working-directory: ./frontend
-        run: npm ci
+        working-directory: frontend
+        run: npm ci --ignore-scripts
 
       - name: 🏗️ Build for production
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm run build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL_PROD || 'https://api.example.com' }}
