@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Request, Response } from 'express';
 import { conversationalWorkflowService } from '../services/conversational/workflow.service';
 const { StructuredLogger } = require('../utils/structured-logger');

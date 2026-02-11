@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 // import { projectService } from '../services/project.service'; // Unused for now

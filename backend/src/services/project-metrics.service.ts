@@ -349,7 +349,7 @@ export class ProjectMetricsService {
   }
 
   private static generateMockCostTrend(): Array<{ date: string; cost: number; tokens: number }> {
-    const trend = [];
+    const trend: Array<{ date: string; cost: number; tokens: number }> = [];
     const today = new Date();
 
     for (let i = 29; i >= 0; i--) {

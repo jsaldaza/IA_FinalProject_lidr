@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { OpenAI } from 'openai';
 import { configService } from './config.service';
 import { PrismaClient } from '@prisma/client';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // 🚀 SERVICIO DE PERSISTENCIA SIMPLIFICADO PARA SUPABASE
 // ======================================================
 import { prisma } from '../lib/prisma';

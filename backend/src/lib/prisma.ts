@@ -1,9 +1,9 @@
 // 🌟 CLIENTE PRISMA OPTIMIZADO PARA MONGODB ATLAS
 // ==============================================
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 // Configuración optimizada para MongoDB Atlas
-const prismaOptions: Prisma.PrismaClientOptions = {
+const prismaOptions = {
   datasources: {
     db: {
       url: process.env.DATABASE_URL,

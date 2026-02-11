@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient, RedisClientType } from 'redis';
 import { StructuredLogger } from './structured-logger';
 

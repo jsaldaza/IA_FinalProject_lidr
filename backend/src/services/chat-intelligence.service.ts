@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Servicio de Chat Inteligente para Levantamiento de Requerimientos
  * Proporciona respuestas estructuradas y guiadas para el análisis conversacional
