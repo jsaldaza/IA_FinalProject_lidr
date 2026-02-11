@@ -1,4 +1,5 @@
 /// <reference types="jest" />
+import { jest } from '@jest/globals'
 // Jest setup file
 // This file runs before all tests
 
