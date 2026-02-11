@@ -7,6 +7,8 @@ process.env.JWT_SECRET = 'test-jwt-secret-key';
 process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/testdb';
 
 // Increase timeout for database operations
+/// <reference types="jest" />
+
 jest.setTimeout(10000);
 
 // Mock console methods to reduce noise in tests
