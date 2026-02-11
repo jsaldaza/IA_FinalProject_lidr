@@ -29,7 +29,7 @@
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "postinstall": "if [ \"$CI\" = \"true\" ] || [ \"$HUSKY\" = \"0\" ]; then echo 'Skipping husky (CI/HUSKY=0)'; else husky install; fi"
+    "postinstall": "if [ -n \"$CI\" ] || [ \"$HUSKY\" = \"0\" ]; then echo 'Skipping husky (CI/HUSKY=0)'; elif command -v husky >/dev/null 2>&1; then husky install; else echo 'Husky not installed; skipping'; fi"
   },
   "keywords": [
     "testing",
