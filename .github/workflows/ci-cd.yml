@@ -147,6 +147,7 @@ jobs:
     environment: production
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || '' }}
+      RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || secrets.RAILWAY_SERVICE || '' }}
     defaults:
       run:
         working-directory: ./backend
@@ -156,6 +157,12 @@ jobs:
         if: env.RAILWAY_TOKEN == ''
         run: |
           echo "RAILWAY_TOKEN not set; skipping Railway deploy"
+          exit 0
+
+      - name: ⏭️ Skip if no Railway service name/id
+        if: env.RAILWAY_SERVICE == ''
+        run: |
+          echo "RAILWAY_SERVICE not set; set repository variable RAILWAY_SERVICE to the Railway service name or id"
           exit 0
 
       - name: 📥 Checkout code
@@ -170,7 +177,7 @@ jobs:
         if: env.RAILWAY_TOKEN != ''
         run: |
           npm install -g @railway/cli
-          railway up --service testforge-backend --environment production --ci
+          railway up --service "${RAILWAY_SERVICE}" --environment production --ci
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
