@@ -13,8 +13,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig*.json ./
 
-# Instalar dependencias
-RUN npm ci --production=false
+# Instalar dependencias (usa install para resolver lock desincronizado en CI)
+RUN npm install --no-fund --no-audit
 
 # Copiar prisma y generar cliente
 COPY prisma/ ./prisma/
