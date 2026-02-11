@@ -7,13 +7,8 @@ module.exports = {
   moduleFileExtensions: ["ts", "js", "json", "node"],
   testMatch: ["**/__tests__/**/*.test.ts", "**/?(*.)+(spec|test).ts"],
   transform: {
-    "^.+\\.ts$": "ts-jest",
-  },
-  globals: {
-    "ts-jest": {
-      // Use the test config so Jest sees test files and jest globals
-      tsconfig: "tsconfig.test.json",
-    },
+    // Point ts-jest to the dedicated test tsconfig so Jest globals are typed
+    "^.+\\.ts$": ["ts-jest", { tsconfig: "tsconfig.test.json" }],
   },
   collectCoverageFrom: [
     "src/**/*.ts",
