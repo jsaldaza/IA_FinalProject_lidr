@@ -14,7 +14,7 @@ const prismaOptions = {
     : ['error'],
   
   // Configuración específica para optimización
-  errorFormat: 'pretty',
+  errorFormat: 'pretty' as const,
 };
 
 // Singleton pattern optimizado para MongoDB Atlas
