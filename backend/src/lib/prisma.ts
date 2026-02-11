@@ -3,18 +3,14 @@
 import { PrismaClient } from '@prisma/client';
 
 // Configuración optimizada para MongoDB Atlas
+// Nota: omitimos tipado estricto de Prisma options para evitar incompatibilidades de runtime
+// (el cliente Mongo de Prisma no exporta LogLevel/PrismaClientOptions en esta versión).
 const prismaOptions = {
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
     },
   },
-  log: process.env.NODE_ENV === 'development'
-    ? ['query', 'info', 'warn', 'error']
-    : ['error'],
-  
-  // Configuración específica para optimización
-  errorFormat: 'pretty' as const,
 };
 
 // Singleton pattern optimizado para MongoDB Atlas
