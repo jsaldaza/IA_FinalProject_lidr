@@ -9,8 +9,8 @@ const prismaOptions = {
       url: process.env.DATABASE_URL,
     },
   },
-  log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'info', 'warn', 'error'] 
+  log: process.env.NODE_ENV === 'development'
+    ? ['query', 'info', 'warn', 'error']
     : ['error'],
   
   // Configuración específica para optimización
