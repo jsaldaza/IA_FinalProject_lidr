@@ -148,9 +148,6 @@ jobs:
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || '' }}
       RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || secrets.RAILWAY_SERVICE || '' }}
-    defaults:
-      run:
-        working-directory: ./backend
 
     steps:
       - name: ⏭️ Skip if no Railway token
@@ -175,6 +172,7 @@ jobs:
 
       - name: 🚀 Deploy to Railway via CLI
         if: env.RAILWAY_TOKEN != ''
+        working-directory: ./backend
         run: |
           npm install -g @railway/cli
           railway up --service "${RAILWAY_SERVICE}" --environment production --ci
@@ -191,9 +189,6 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || '' }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || '' }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || '' }}
-    defaults:
-      run:
-        working-directory: ./frontend
 
     steps:
       - name: ⏭️ Skip if Vercel secrets missing
