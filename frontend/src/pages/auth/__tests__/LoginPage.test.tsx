@@ -4,8 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { ChakraProvider } from '@chakra-ui/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
-import theme from '../../theme'
-import LoginPage from '../../pages/auth/LoginPage'
+import theme from '../../../theme'
+import LoginPage from '../LoginPage'
 
 // Mock de useAuthStore
 vi.mock('../../stores/authStore', () => ({

@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAuthStore } from '../authStore'
 
+const TOKEN_KEY = 'testforge_token'
+
+vi.mock('../../lib/api', () => ({
+  auth: {
+    login: vi.fn(),
+    logout: vi.fn(),
+    getProfile: vi.fn()
+  }
+}))
+
+import { auth } from '../../lib/api'
+
 // Mock de localStorage
 const localStorageMock = {
   getItem: vi.fn(),
@@ -14,9 +26,18 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
-// Mock de fetch
-const mockFetch = vi.fn()
-global.fetch = mockFetch
+// Mock de sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
+}
+
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock
+})
+
 
 describe('useAuthStore', () => {
   beforeEach(() => {
@@ -24,6 +45,16 @@ describe('useAuthStore', () => {
     localStorageMock.getItem.mockReturnValue(null)
     localStorageMock.setItem.mockImplementation(() => {})
     localStorageMock.removeItem.mockImplementation(() => {})
+    sessionStorageMock.getItem.mockReturnValue(null)
+    sessionStorageMock.setItem.mockImplementation(() => {})
+    sessionStorageMock.removeItem.mockImplementation(() => {})
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      loading: true,
+      error: null
+    })
   })
 
   it('initializes with default state', () => {
@@ -31,7 +62,7 @@ describe('useAuthStore', () => {
 
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.user).toBeNull()
-    expect(result.current.loading).toBe(false)
+    expect(result.current.loading).toBe(true)
   })
 
   it('logs in successfully', async () => {
@@ -47,10 +78,7 @@ describe('useAuthStore', () => {
       token: 'mock-jwt-token'
     }
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockResponse)
-    } as Response)
+    ;(auth.login as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockResponse)
 
     const { result } = renderHook(() => useAuthStore())
 
@@ -60,16 +88,13 @@ describe('useAuthStore', () => {
 
     expect(result.current.isAuthenticated).toBe(true)
     expect(result.current.user).toEqual(mockUser)
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('auth-token', 'mock-jwt-token')
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(TOKEN_KEY, 'mock-jwt-token')
   })
 
   it('handles login failure', async () => {
     const errorMessage = 'Invalid credentials'
 
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: () => Promise.resolve({ error: errorMessage })
-    } as Response)
+    ;(auth.login as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error(errorMessage))
 
     const { result } = renderHook(() => useAuthStore())
 
@@ -88,30 +113,35 @@ describe('useAuthStore', () => {
     expect(result.current.user).toBeNull()
   })
 
-  it('logs out correctly', () => {
+  it('logs out correctly', async () => {
     const { result } = renderHook(() => useAuthStore())
 
     // Set initial authenticated state
     act(() => {
-      result.current.isAuthenticated = true
-      result.current.user = {
-        id: '1',
-        email: 'test@example.com',
-        createdAt: '2025-01-01T00:00:00Z',
-        updatedAt: '2025-01-01T00:00:00Z'
-      }
+      useAuthStore.setState({
+        isAuthenticated: true,
+        user: {
+          id: '1',
+          email: 'test@example.com',
+          createdAt: '2025-01-01T00:00:00Z',
+          updatedAt: '2025-01-01T00:00:00Z'
+        },
+        token: 'mock-jwt-token',
+        loading: false,
+        error: null
+      })
     })
 
-    act(() => {
-      result.current.logout()
+    await act(async () => {
+      await result.current.logout()
     })
 
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.user).toBeNull()
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth-token')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith(TOKEN_KEY)
   })
 
-  it('loads user from token on initialization', () => {
+  it('loads user from token on initialization', async () => {
     const mockUser = {
       id: '1',
       email: 'test@example.com',
@@ -119,15 +149,15 @@ describe('useAuthStore', () => {
       updatedAt: '2025-01-01T00:00:00Z'
     }
 
-    localStorageMock.getItem.mockReturnValue('mock-jwt-token')
+    sessionStorageMock.getItem.mockReturnValue('mock-jwt-token')
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ user: mockUser })
-    } as Response)
+    ;(auth.getProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockUser)
 
-    renderHook(() => useAuthStore())
+    const { result } = renderHook(() => useAuthStore())
+    await act(async () => {
+      await result.current.checkAuth()
+    })
 
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('auth-token')
+    expect(sessionStorageMock.getItem).toHaveBeenCalledWith(TOKEN_KEY)
   })
 })

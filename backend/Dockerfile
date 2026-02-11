@@ -1,5 +1,5 @@
 # 🐳 Dockerfile para Railway - Desde directorio backend
-FROM node:18-slim
+FROM node:20.19.0-slim
 
 # Instalar dependencias del sistema
 RUN apt-get update && \

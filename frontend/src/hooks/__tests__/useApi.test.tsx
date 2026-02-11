@@ -4,14 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useApiQuery, useApiMutation } from '../useApi'
 import type { ReactNode } from 'react'
 
+const BASE_URL = 'http://localhost:3000/api'
+
 // Test wrapper for React Query
 const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
+  const queryClient = new QueryClient()
   
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
@@ -27,7 +24,7 @@ describe('useApiQuery', () => {
 
   it('successfully fetches data', async () => {
     const { result } = renderHook(
-      () => useApiQuery(['test-data'], '/api/projects/in-progress'),
+      () => useApiQuery(['test-data'], '/projects/in-progress'),
       { wrapper: createWrapper() }
     )
 
@@ -48,7 +45,7 @@ describe('useApiQuery', () => {
     const { http, HttpResponse } = await import('msw')
     
     server.use(
-      http.get('/api/test-error', () => {
+      http.get(`${BASE_URL}/test-error`, () => {
         return new HttpResponse(
           JSON.stringify({ message: 'Server error' }),
           { status: 500 }
@@ -57,16 +54,16 @@ describe('useApiQuery', () => {
     )
 
     const { result } = renderHook(
-      () => useApiQuery(['test-error'], '/api/test-error'),
+      () => useApiQuery(['test-error'], '/test-error'),
       { wrapper: createWrapper() }
     )
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
-    })
+    }, { timeout: 5000 })
 
     expect(result.current.error).toBeDefined()
-    expect(result.current.error?.message).toContain('Request failed')
+    expect(result.current.error?.message).toContain('Server error')
   })
 
   it('does not retry on 4xx errors', async () => {
@@ -81,10 +78,10 @@ describe('useApiQuery', () => {
       )
     })
     
-    server.use(http.get('/api/test-404', mockHandler))
+    server.use(http.get(`${BASE_URL}/test-404`, mockHandler))
 
     const { result } = renderHook(
-      () => useApiQuery(['test-404'], '/api/test-404'),
+      () => useApiQuery(['test-404'], '/test-404'),
       { wrapper: createWrapper() }
     )
 
@@ -113,10 +110,10 @@ describe('useApiQuery', () => {
       return HttpResponse.json({ status: 'success', data: 'recovered' })
     })
     
-    server.use(http.get('/api/test-retry', mockHandler))
+    server.use(http.get(`${BASE_URL}/test-retry`, mockHandler))
 
     const { result } = renderHook(
-      () => useApiQuery(['test-retry'], '/api/test-retry'),
+      () => useApiQuery(['test-retry'], '/test-retry'),
       { wrapper: createWrapper() }
     )
 
@@ -137,7 +134,7 @@ describe('useApiMutation', () => {
 
   it('successfully performs POST mutation', async () => {
     const { result } = renderHook(
-      () => useApiMutation('/api/projects/draft', 'POST'),
+      () => useApiMutation('/projects', 'POST'),
       { wrapper: createWrapper() }
     )
 
@@ -159,7 +156,7 @@ describe('useApiMutation', () => {
     const { http, HttpResponse } = await import('msw')
     
     server.use(
-      http.post('/api/test-mutation-error', () => {
+      http.post(`${BASE_URL}/test-mutation-error`, () => {
         return new HttpResponse(
           JSON.stringify({ error: 'Validation error' }),
           { status: 400 }
@@ -168,7 +165,7 @@ describe('useApiMutation', () => {
     )
 
     const { result } = renderHook(
-      () => useApiMutation('/api/test-mutation-error', 'POST'),
+      () => useApiMutation('/test-mutation-error', 'POST'),
       { wrapper: createWrapper() }
     )
 
@@ -183,7 +180,7 @@ describe('useApiMutation', () => {
 
   it('supports DELETE mutations', async () => {
     const { result } = renderHook(
-      () => useApiMutation('/api/projects/1', 'DELETE'),
+      () => useApiMutation('/projects/1', 'DELETE'),
       { wrapper: createWrapper() }
     )
 
@@ -213,7 +210,7 @@ describe('useApiMutation', () => {
     )
 
     const { result } = renderHook(
-      () => useApiMutation('/api/projects/draft', 'POST', {
+      () => useApiMutation('/projects', 'POST', {
         invalidateQueries: ['projects']
       }),
       { wrapper }

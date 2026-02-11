@@ -1,5 +1,5 @@
 # 🐳 Dockerfile para Frontend React + Vite
-FROM node:18-alpine AS builder
+FROM node:20.19.0-alpine AS builder
 
 # Instalar dependencias del sistema
 RUN apk add --no-cache libc6-compat

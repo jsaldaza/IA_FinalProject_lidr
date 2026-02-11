@@ -53,7 +53,7 @@ describe('Layout Component', () => {
 
     // Verificar elementos de navegación comunes
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.getByText('Proyectos')).toBeInTheDocument()
   })
 
   it('shows user menu when authenticated', () => {
@@ -64,6 +64,6 @@ describe('Layout Component', () => {
     )
 
     // Verificar que se muestra información del usuario
-    expect(screen.getByText('Test User')).toBeInTheDocument()
+    expect(screen.getByText('test')).toBeInTheDocument()
   })
 })

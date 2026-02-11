@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChakraProvider } from '@chakra-ui/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -31,7 +31,7 @@ describe('CreateProjectModal', () => {
     vi.clearAllMocks()
   })
 
-  it('renders correctly when open', () => {
+  it('renders correctly when open', async () => {
     render(
       <TestWrapper>
         <CreateProjectModal 
@@ -42,10 +42,10 @@ describe('CreateProjectModal', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByText('Crear Nuevo Proyecto')).toBeInTheDocument()
-    expect(screen.getByLabelText('Nombre del proyecto')).toBeInTheDocument()
+    expect(await screen.findByText('Crear Nuevo Proyecto')).toBeInTheDocument()
+    expect(await screen.findByPlaceholderText('Ej: Sistema de Gestión de Inventario')).toBeInTheDocument()
     expect(screen.getByText('Cancelar')).toBeInTheDocument()
-    expect(screen.getByText('Guardar')).toBeInTheDocument()
+    expect(screen.getByText('Crear y Comenzar Análisis')).toBeInTheDocument()
   })
 
   it('does not render when closed', () => {
@@ -62,7 +62,7 @@ describe('CreateProjectModal', () => {
     expect(screen.queryByText('Crear Nuevo Proyecto')).not.toBeInTheDocument()
   })
 
-  it('validates required field', async () => {
+  it('disables submit until required fields are filled', async () => {
     const user = userEvent.setup()
 
     render(
@@ -75,16 +75,11 @@ describe('CreateProjectModal', () => {
       </TestWrapper>
     )
 
-    const saveButton = screen.getByText('Guardar')
+    const saveButton = screen.getByText('Crear y Comenzar Análisis')
     expect(saveButton).toBeDisabled()
 
-    // Try to submit without filling the field
     await user.click(saveButton)
-    
-    // Should show validation message
-    await waitFor(() => {
-      expect(screen.getByText('Nombre requerido')).toBeInTheDocument()
-    })
+    expect(saveButton).toBeDisabled()
   })
 
   it('enables save button when title is provided', async () => {
@@ -100,12 +95,14 @@ describe('CreateProjectModal', () => {
       </TestWrapper>
     )
 
-    const titleInput = screen.getByLabelText('Nombre del proyecto')
-    const saveButton = screen.getByText('Guardar')
+    const titleInput = await screen.findByPlaceholderText('Ej: Sistema de Gestión de Inventario')
+    const descriptionInput = screen.getByPlaceholderText('Ej: Necesito crear un sistema de gestión de inventario para una tienda que permita controlar stock, generar reportes y manejar proveedores. El sistema debe tener diferentes roles de usuario...')
+    const saveButton = screen.getByText('Crear y Comenzar Análisis')
 
     expect(saveButton).toBeDisabled()
 
     await user.type(titleInput, 'Test Project')
+    await user.type(descriptionInput, 'Descripcion de prueba con mas de veinte caracteres')
     expect(saveButton).toBeEnabled()
   })
 
@@ -128,6 +125,24 @@ describe('CreateProjectModal', () => {
 
   it('handles successful project creation', async () => {
     const user = userEvent.setup()
+    const { server } = await import('../../test/mocks/server')
+    const { http, HttpResponse } = await import('msw')
+
+    server.use(
+      http.post('http://localhost:3000/api/projects/create-and-start', () => {
+        return HttpResponse.json({
+          data: {
+            project: {
+              id: '123',
+              title: 'Test Project',
+              description: 'Descripcion de prueba con mas de veinte caracteres',
+              status: 'IN_PROGRESS',
+              createdAt: '2025-01-01T00:00:00Z'
+            }
+          }
+        })
+      })
+    )
 
     render(
       <TestWrapper>
@@ -139,15 +154,17 @@ describe('CreateProjectModal', () => {
       </TestWrapper>
     )
 
-    const titleInput = screen.getByLabelText('Nombre del proyecto')
-    const saveButton = screen.getByText('Guardar')
+    const titleInput = await screen.findByPlaceholderText('Ej: Sistema de Gestión de Inventario')
+    const descriptionInput = screen.getByPlaceholderText('Ej: Necesito crear un sistema de gestión de inventario para una tienda que permita controlar stock, generar reportes y manejar proveedores. El sistema debe tener diferentes roles de usuario...')
+    const saveButton = screen.getByText('Crear y Comenzar Análisis')
 
     await user.type(titleInput, 'Test Project')
+    await user.type(descriptionInput, 'Descripcion de prueba con mas de veinte caracteres')
     await user.click(saveButton)
 
     // Should call the API and handle success
     await waitFor(() => {
-      expect(screen.getByText('Borrador creado')).toBeInTheDocument()
+      expect(screen.getByText('Proyecto creado')).toBeInTheDocument()
     })
 
     expect(mockOnCreated).toHaveBeenCalledWith(
@@ -166,7 +183,7 @@ describe('CreateProjectModal', () => {
     const { http, HttpResponse } = await import('msw')
     
     server.use(
-      http.post('/api/projects/draft', () => {
+      http.post('http://localhost:3000/api/projects/create-and-start', () => {
         return new HttpResponse(
           JSON.stringify({ error: 'Server error' }),
           { status: 500 }
@@ -184,14 +201,16 @@ describe('CreateProjectModal', () => {
       </TestWrapper>
     )
 
-    const titleInput = screen.getByLabelText('Nombre del proyecto')
-    const saveButton = screen.getByText('Guardar')
+    const titleInput = await screen.findByPlaceholderText('Ej: Sistema de Gestión de Inventario')
+    const descriptionInput = screen.getByPlaceholderText('Ej: Necesito crear un sistema de gestión de inventario para una tienda que permita controlar stock, generar reportes y manejar proveedores. El sistema debe tener diferentes roles de usuario...')
+    const saveButton = screen.getByText('Crear y Comenzar Análisis')
 
     await user.type(titleInput, 'Test Project')
+    await user.type(descriptionInput, 'Descripcion de prueba con mas de veinte caracteres')
     await user.click(saveButton)
 
     await waitFor(() => {
-      expect(screen.getByText('Error creando borrador')).toBeInTheDocument()
+      expect(screen.getByText('Error creando proyecto')).toBeInTheDocument()
     })
 
     expect(mockOnCreated).not.toHaveBeenCalled()

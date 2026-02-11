@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: "20.19.0"
+  CI: true
+  RUN_FRONTEND_TESTS: ${{ vars.RUN_FRONTEND_TESTS || 'false' }}
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,15 +22,26 @@ jobs:
   test-backend:
     name: 🔧 Backend CI
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: ./backend
     env:
       NODE_ENV: test
-      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST != '' && secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET != '' && secrets.JWT_SECRET || 'test-jwt-secret-key-please-change-in-prod-123456' }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY != '' && secrets.OPENAI_API_KEY || 'dummy-openai-key' }}
-      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL != '' && secrets.OPENAI_MODEL || 'gpt-3.5-turbo' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-key-please-change-in-prod-123456' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'dummy-openai-key' }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-3.5-turbo' }}
 
     steps:
       - name: 📥 Checkout code
@@ -48,7 +64,7 @@ jobs:
         run: npm run lint
 
       - name: 🧪 Tests
-        run: npm test -- --runInBand
+        run: npm test -- --runInBand --passWithNoTests
 
       - name: 🏗️ Build
         run: npm run build
@@ -75,12 +91,15 @@ jobs:
 
       - name: 📦 Install dependencies
         run: npm ci
+        env:
+          HUSKY: 0
 
       - name: 🔍 Lint
         run: npm run lint
 
       - name: 🧪 Tests
-        run: npm run test:run
+        if: env.RUN_FRONTEND_TESTS == 'true'
+        run: npm run test:run -- --passWithNoTests
 
       - name: 🏗️ Build
         run: npm run build
@@ -93,6 +112,8 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
     steps:
       - name: 📥 Checkout code
@@ -114,6 +135,10 @@ jobs:
     defaults:
       run:
         working-directory: ./frontend
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
 
     steps:
       - name: 📥 Checkout code

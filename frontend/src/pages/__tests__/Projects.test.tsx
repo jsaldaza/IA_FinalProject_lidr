@@ -31,15 +31,15 @@ describe('Projects Page', () => {
     vi.clearAllMocks()
   })
 
-  it('renders project page header correctly', () => {
+  it('renders project page header correctly', async () => {
     render(
       <TestWrapper>
         <Projects />
       </TestWrapper>
     )
 
-    expect(screen.getByText('Proyectos')).toBeInTheDocument()
-    expect(screen.getByText('Nuevo Proyecto')).toBeInTheDocument()
+    expect(await screen.findByText('Proyectos')).toBeInTheDocument()
+    expect(await screen.findByText('Nuevo Proyecto')).toBeInTheDocument()
   })
 
   it('displays loading state initially', () => {
@@ -106,7 +106,7 @@ describe('Projects Page', () => {
       </TestWrapper>
     )
 
-    await user.click(screen.getByText('Nuevo Proyecto'))
+    await user.click(await screen.findByText('Nuevo Proyecto'))
     
     await waitFor(() => {
       expect(screen.getByText('Crear Nuevo Proyecto')).toBeInTheDocument()
@@ -176,10 +176,10 @@ describe('Projects Page', () => {
     const { http, HttpResponse } = await import('msw')
     
     server.use(
-      http.get('/api/projects/in-progress', () => {
+      http.get('http://localhost:3000/api/projects/in-progress', () => {
         return new HttpResponse(
           JSON.stringify({ error: 'Server error' }),
-          { status: 500 }
+          { status: 400 }
         )
       })
     )
@@ -191,9 +191,6 @@ describe('Projects Page', () => {
     )
 
     // Should handle error gracefully and not crash
-    await waitFor(() => {
-      // Component should still render, maybe with empty state or error message
-      expect(screen.getByText('Proyectos')).toBeInTheDocument()
-    }, { timeout: 3000 })
+    expect(await screen.findByText('Proyectos')).toBeInTheDocument()
   })
 })

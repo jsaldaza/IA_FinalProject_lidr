@@ -47,5 +47,16 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+}
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock
+})
+
 // Mock fetch for tests that might not use MSW
 global.fetch = vi.fn()

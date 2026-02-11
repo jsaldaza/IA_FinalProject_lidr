@@ -6,6 +6,7 @@ import {
     Container,
     FormControl,
     FormLabel,
+    FormErrorMessage,
     Heading,
     Input,
     Link,
@@ -26,6 +27,7 @@ export const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
     const navigate = useNavigate();
     const { login } = useAuthStore();
@@ -39,6 +41,20 @@ export const LoginPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const validationErrors: { email?: string; password?: string } = {};
+        if (!email.trim()) {
+            validationErrors.email = 'El email es requerido';
+        }
+        if (!password.trim()) {
+            validationErrors.password = 'La contraseña es requerida';
+        }
+
+        setErrors(validationErrors);
+        if (Object.keys(validationErrors).length > 0) {
+            return;
+        }
+
         setIsLoading(true);
         
         try {
@@ -123,9 +139,9 @@ export const LoginPage: React.FC = () => {
                                     </Text>
                                 </VStack>
 
-                                <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                                <form onSubmit={handleSubmit} noValidate style={{ width: '100%' }}>
                                     <VStack spacing={5}>
-                                        <FormControl isRequired>
+                                        <FormControl isRequired isInvalid={Boolean(errors.email)}>
                                             <FormLabel 
                                                 fontWeight="medium" 
                                                 color="gray.700"
@@ -137,9 +153,15 @@ export const LoginPage: React.FC = () => {
                                                 <Input
                                                     type="email"
                                                     value={email}
-                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    onChange={(e) => {
+                                                        setEmail(e.target.value);
+                                                        if (errors.email) {
+                                                            setErrors((prev) => ({ ...prev, email: undefined }));
+                                                        }
+                                                    }}
                                                     placeholder="tu@email.com"
                                                     autoComplete="email"
+                                                    required
                                                     borderRadius="xl"
                                                     border="1px solid"
                                                     borderColor="gray.200"
@@ -152,9 +174,12 @@ export const LoginPage: React.FC = () => {
                                                     }}
                                                 />
                                             </HStack>
+                                            {errors.email && (
+                                                <FormErrorMessage>{errors.email}</FormErrorMessage>
+                                            )}
                                         </FormControl>
 
-                                        <FormControl isRequired>
+                                        <FormControl isRequired isInvalid={Boolean(errors.password)}>
                                             <FormLabel 
                                                 fontWeight="medium" 
                                                 color="gray.700"
@@ -166,9 +191,15 @@ export const LoginPage: React.FC = () => {
                                                 <Input
                                                     type="password"
                                                     value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    onChange={(e) => {
+                                                        setPassword(e.target.value);
+                                                        if (errors.password) {
+                                                            setErrors((prev) => ({ ...prev, password: undefined }));
+                                                        }
+                                                    }}
                                                     placeholder="••••••••"
                                                     autoComplete="current-password"
+                                                    required
                                                     borderRadius="xl"
                                                     border="1px solid"
                                                     borderColor="gray.200"
@@ -181,6 +212,9 @@ export const LoginPage: React.FC = () => {
                                                     }}
                                                 />
                                             </HStack>
+                                            {errors.password && (
+                                                <FormErrorMessage>{errors.password}</FormErrorMessage>
+                                            )}
                                         </FormControl>
 
                                         <Button
@@ -205,7 +239,6 @@ export const LoginPage: React.FC = () => {
                                 <Divider />
 
                                 <Text textAlign="center" fontSize="sm">
-                                    ¿No tienes una cuenta?{' '}
                                     <Link 
                                         as={RouterLink} 
                                         to="/register" 
@@ -216,7 +249,7 @@ export const LoginPage: React.FC = () => {
                                             textDecoration: 'underline',
                                         }}
                                     >
-                                        Regístrate aquí
+                                        ¿No tienes cuenta? Regístrate aquí
                                     </Link>
                                 </Text>
                             </VStack>

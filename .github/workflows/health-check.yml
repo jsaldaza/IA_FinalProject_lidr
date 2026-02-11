@@ -10,12 +10,36 @@ jobs:
   health-check:
     name: 🔍 Check Application Health
     runs-on: ubuntu-latest
+    env:
+      BACKEND_URL: ${{ secrets.BACKEND_URL != '' && secrets.BACKEND_URL || '' }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL != '' && secrets.FRONTEND_URL || '' }}
 
     steps:
+      - name: ⚙️ Validate inputs
+        id: guard
+        shell: bash
+        run: |
+          run_backend=true
+          run_frontend=true
+
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️ BACKEND_URL is not set; backend, DB, and API docs checks will be skipped." >&2
+            run_backend=false
+          fi
+
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "⚠️ FRONTEND_URL is not set; frontend check will be skipped." >&2
+            run_frontend=false
+          fi
+
+          echo "run_backend=$run_backend" >> "$GITHUB_OUTPUT"
+          echo "run_frontend=$run_frontend" >> "$GITHUB_OUTPUT"
+
       - name: 🏥 Check Backend Health
+        if: steps.guard.outputs.run_backend == 'true'
         run: |
           echo "Checking backend health..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/health || echo "000")
+          response=$(curl -L --fail --retry 2 --max-time 15 --silent --output /dev/null --write-out "%{http_code}" "$BACKEND_URL/health" || echo "000")
           if [ "$response" = "200" ]; then
             echo "✅ Backend is healthy (HTTP $response)"
           else
@@ -24,9 +48,10 @@ jobs:
           fi
 
       - name: 🌐 Check Frontend
+        if: steps.guard.outputs.run_frontend == 'true'
         run: |
           echo "Checking frontend accessibility..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.FRONTEND_URL }} || echo "000")
+          response=$(curl -L --fail --retry 2 --max-time 15 --silent --output /dev/null --write-out "%{http_code}" "$FRONTEND_URL" || echo "000")
           if [ "$response" = "200" ]; then
             echo "✅ Frontend is accessible (HTTP $response)"
           else
@@ -35,9 +60,10 @@ jobs:
           fi
 
       - name: 🗄️ Check Database Connectivity
+        if: steps.guard.outputs.run_backend == 'true'
         run: |
           echo "Checking database connectivity through API..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/db-test || echo "000")
+          response=$(curl -L --fail --retry 2 --max-time 15 --silent --output /dev/null --write-out "%{http_code}" "$BACKEND_URL/db-test" || echo "000")
           if [ "$response" = "200" ]; then
             echo "✅ Database is connected (HTTP $response)"
           else
@@ -46,9 +72,10 @@ jobs:
           fi
 
       - name: 📊 Check API Documentation
+        if: steps.guard.outputs.run_backend == 'true'
         run: |
           echo "Checking API documentation..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.BACKEND_URL }}/api-docs || echo "000")
+          response=$(curl -L --retry 2 --max-time 15 --silent --output /dev/null --write-out "%{http_code}" "$BACKEND_URL/api-docs" || echo "000")
           if [ "$response" = "200" ] || [ "$response" = "301" ] || [ "$response" = "302" ]; then
             echo "✅ API docs are accessible (HTTP $response)"
           else
