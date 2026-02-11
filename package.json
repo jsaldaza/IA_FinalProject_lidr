@@ -29,7 +29,7 @@
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "postinstall": "husky install"
+    "postinstall": "if [ \"$CI\" = \"true\" ]; then echo 'Skipping husky on CI'; else husky install; fi"
   },
   "keywords": [
     "testing",

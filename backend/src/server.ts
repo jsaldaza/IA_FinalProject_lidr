@@ -19,6 +19,9 @@ import { RedisCache } from './utils/redis-cache';
 const app = express();
 const prisma = new PrismaClient();
 
+// Behind Railway/Vercel we must trust the proxy so rate limiting and IPs work correctly
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === 'production',
@@ -36,8 +39,14 @@ app.use(cookieParser());
 app.use(globalRateLimiter);
 
 // CORS configuration - SECURE
+const defaultProdOrigins = [
+    'https://testforge.com',
+    'https://qnexia.vercel.app',
+    'https://iafinalprojectlidr-production.up.railway.app'
+];
+
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['https://testforge.com'])
+    ? (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : defaultProdOrigins)
     : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4173'];
 
 app.use(cors({
