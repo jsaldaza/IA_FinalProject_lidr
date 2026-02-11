@@ -132,18 +132,25 @@ jobs:
     name: 🚂 Deploy Backend (Railway)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || '' }}
-    if: ${{ github.ref == 'refs/heads/main' && (secrets.RAILWAY_TOKEN != '') }}
     defaults:
       run:
         working-directory: ./backend
 
     steps:
+      - name: ⏭️ Skip if no Railway token
+        if: env.RAILWAY_TOKEN == ''
+        run: |
+          echo "RAILWAY_TOKEN not set; skipping Railway deploy"
+          exit 0
+
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: 🚀 Deploy to Railway
+        if: env.RAILWAY_TOKEN != ''
         uses: railwayapp/railway-deploy@v3
         with:
           service: testforge-backend
@@ -155,16 +162,22 @@ jobs:
     name: 🌐 Deploy Frontend (Vercel)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || '' }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || '' }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || '' }}
-    if: ${{ github.ref == 'refs/heads/main' && (secrets.VERCEL_TOKEN != '' && secrets.VERCEL_PROJECT_ID != '' && secrets.VERCEL_ORG_ID != '') }}
     defaults:
       run:
         working-directory: ./frontend
 
     steps:
+      - name: ⏭️ Skip if Vercel secrets missing
+        if: env.VERCEL_TOKEN == '' || env.VERCEL_PROJECT_ID == '' || env.VERCEL_ORG_ID == ''
+        run: |
+          echo "Vercel secrets missing; skipping frontend deploy"
+          exit 0
+
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
@@ -184,6 +197,7 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL_PROD || 'https://api.example.com' }}
 
       - name: 🚀 Deploy to Vercel
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_PROJECT_ID != '' && env.VERCEL_ORG_ID != ''
         uses: vercel/action@v1
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
