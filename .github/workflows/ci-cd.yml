@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,7 +13,17 @@ permissions:
 env:
   NODE_VERSION: "20.19.0"
   CI: true
+  HUSKY: 0
   RUN_FRONTEND_TESTS: ${{ vars.RUN_FRONTEND_TESTS || 'false' }}
+  DATABASE_URL_DEFAULT: "mongodb://127.0.0.1:27017/testforge_ci"
+  JWT_SECRET_DEFAULT: "test-jwt-secret-key-please-change-in-prod-123456"
+  OPENAI_API_KEY_DEFAULT: "dummy-openai-key"
+  OPENAI_MODEL_DEFAULT: "gpt-3.5-turbo"
+  REQUEST_SIGNING_SECRET_DEFAULT: "ci-request-signing-secret-change-me"
+
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -37,11 +48,13 @@ jobs:
         working-directory: ./backend
     env:
       NODE_ENV: test
-      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
-      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_ci' }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-key-please-change-in-prod-123456' }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'dummy-openai-key' }}
-      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-3.5-turbo' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST || env.DATABASE_URL_DEFAULT }}
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST || env.DATABASE_URL_DEFAULT }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || env.JWT_SECRET_DEFAULT }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || env.OPENAI_API_KEY_DEFAULT }}
+      OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || env.OPENAI_MODEL_DEFAULT }}
+      REQUEST_SIGNING_SECRET: ${{ secrets.REQUEST_SIGNING_SECRET || env.REQUEST_SIGNING_SECRET_DEFAULT }}
+      REDIS_URL: ${{ secrets.REDIS_URL || '' }}
 
     steps:
       - name: 📥 Checkout code
@@ -53,6 +66,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: ./backend/package-lock.json
+
+      - name: 🧾 Prepare test environment file
+        run: |
+          cat <<'EOF' > .env.test
+          NODE_ENV=test
+          DATABASE_URL=${DATABASE_URL}
+          JWT_SECRET=${JWT_SECRET}
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+          OPENAI_MODEL=${OPENAI_MODEL}
+          REQUEST_SIGNING_SECRET=${REQUEST_SIGNING_SECRET}
+          REDIS_URL=${REDIS_URL}
+          EOF
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -91,8 +116,6 @@ jobs:
 
       - name: 📦 Install dependencies
         run: npm ci
-        env:
-          HUSKY: 0
 
       - name: 🔍 Lint
         run: npm run lint
@@ -108,12 +131,12 @@ jobs:
     name: 🚂 Deploy Backend (Railway)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' && secrets.RAILWAY_TOKEN != '' }}
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || '' }}
+    if: ${{ github.ref == 'refs/heads/main' && env.RAILWAY_TOKEN != '' }}
     defaults:
       run:
         working-directory: ./backend
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
     steps:
       - name: 📥 Checkout code
@@ -131,14 +154,14 @@ jobs:
     name: 🌐 Deploy Frontend (Vercel)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_PROJECT_ID != '' && secrets.VERCEL_ORG_ID != '' }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || '' }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || '' }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || '' }}
+    if: ${{ github.ref == 'refs/heads/main' && env.VERCEL_TOKEN != '' && env.VERCEL_PROJECT_ID != '' && env.VERCEL_ORG_ID != '' }}
     defaults:
       run:
         working-directory: ./frontend
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
 
     steps:
       - name: 📥 Checkout code
