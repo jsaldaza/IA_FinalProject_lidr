@@ -16,6 +16,7 @@ env:
   CI: true
   HUSKY: 0
   RUN_FRONTEND_TESTS: ${{ vars.RUN_FRONTEND_TESTS || 'false' }}
+  ENABLE_DEPLOYS: ${{ vars.ENABLE_DEPLOYS || 'false' }}
   DATABASE_URL_DEFAULT: "mongodb://127.0.0.1:27017/testforge_ci"
   JWT_SECRET_DEFAULT: "test-jwt-secret-key-please-change-in-prod-123456"
   OPENAI_API_KEY_DEFAULT: "dummy-openai-key"
@@ -142,7 +143,7 @@ jobs:
     name: 🚂 Deploy Backend (Railway)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && env.ENABLE_DEPLOYS == 'true' }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN || '' }}
     defaults:
@@ -172,7 +173,7 @@ jobs:
     name: 🌐 Deploy Frontend (Vercel)
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && env.ENABLE_DEPLOYS == 'true' }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || '' }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || '' }}
