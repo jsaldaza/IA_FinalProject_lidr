@@ -1,4 +1,5 @@
 // Basic health check test to ensure test infrastructure works
+import { describe, it, expect } from '@jest/globals';
 
 describe('Test Infrastructure', () => {
   it('should run tests successfully', () => {
