@@ -11,7 +11,8 @@ module.exports = {
   },
   globals: {
     "ts-jest": {
-      tsconfig: "tsconfig.json",
+      // Use the test config so Jest sees test files and jest globals
+      tsconfig: "tsconfig.test.json",
     },
   },
   collectCoverageFrom: [
