@@ -69,6 +69,7 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - name: 🧾 Prepare test environment file
+        working-directory: ./backend
         run: |
           cat <<'EOF' > .env.test
           NODE_ENV=test
@@ -81,18 +82,23 @@ jobs:
           EOF
 
       - name: 📦 Install dependencies
+        working-directory: ./backend
         run: npm ci
 
       - name: 🧬 Generate Prisma Client
+        working-directory: ./backend
         run: npx prisma generate
 
       - name: 🔍 Lint
+        working-directory: ./backend
         run: npm run lint
 
       - name: 🧪 Tests
+        working-directory: ./backend
         run: npm test -- --runInBand --passWithNoTests
 
       - name: 🏗️ Build
+        working-directory: ./backend
         run: npm run build
 
   test-frontend:
@@ -116,16 +122,20 @@ jobs:
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
+        working-directory: ./frontend
         run: npm ci
 
       - name: 🔍 Lint
+        working-directory: ./frontend
         run: npm run lint
 
       - name: 🧪 Tests
         if: env.RUN_FRONTEND_TESTS == 'true'
+        working-directory: ./frontend
         run: npm run test:run -- --passWithNoTests
 
       - name: 🏗️ Build
+        working-directory: ./frontend
         run: npm run build
 
   deploy-backend:
@@ -189,9 +199,11 @@ jobs:
           cache-dependency-path: ./frontend/package-lock.json
 
       - name: 📦 Install dependencies
+        working-directory: ./frontend
         run: npm ci
 
       - name: 🏗️ Build for production
+        working-directory: ./frontend
         run: npm run build
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL_PROD || 'https://api.example.com' }}
