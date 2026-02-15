@@ -67,7 +67,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ./backend/package-lock.json
+          cache-dependency-path: ./backend/package.json
 
       - name: 🧾 Prepare test environment file
         working-directory: backend
@@ -84,7 +84,7 @@ jobs:
 
       - name: 📦 Install dependencies
         working-directory: backend
-        run: npm ci --ignore-scripts
+        run: npm install --ignore-scripts
 
       - name: 🛡️ Audit (prod only)
         working-directory: backend
