@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -30,14 +30,7 @@ import {
     Textarea,
     useToast,
     Progress,
-    Divider,
-    IconButton,
-    AlertDialog,
-    AlertDialogBody,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogContent,
-    AlertDialogOverlay
+    Divider
 } from '@chakra-ui/react';
 import { 
     FiPlus, 
@@ -45,10 +38,8 @@ import {
     FiCheckCircle, 
     FiClock, 
     FiEye,
-    FiTrash2,
     FiArchive
 } from 'react-icons/fi';
-import api from '../../lib/api';
 import { conversationalWorkflowService } from '../../services/conversationalWorkflow.service';
 import Loading from '../../components/Loading';
 
@@ -85,14 +76,11 @@ const ConversationalAnalysisPage: React.FC = () => {
     const navigate = useNavigate();
     const toast = useToast();
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-    const cancelRef = useRef<HTMLButtonElement>(null);
     
     const [analyses, setAnalyses] = useState<ConversationalAnalysis[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
-    const [deleteId, setDeleteId] = useState<string | null>(null);
     
     const [newAnalysis, setNewAnalysis] = useState({
         title: '',
@@ -124,7 +112,11 @@ const ConversationalAnalysisPage: React.FC = () => {
             const analyses = await conversationalWorkflowService.getUserWorkflows();
             setAnalyses(analyses.map(analysis => ({
                 ...analysis,
-                completeness: analysis.completeness.overallScore / 100
+                completeness: (() => {
+                    const raw = analysis.completeness as any;
+                    const overallScore = typeof raw === 'number' ? raw : raw?.overallScore ?? 0;
+                    return overallScore / 100;
+                })()
             })));
         } catch (error) {
             console.error('Error loading analyses:', error);
@@ -200,34 +192,6 @@ const ConversationalAnalysisPage: React.FC = () => {
             });
         } finally {
             setCreating(false);
-        }
-    };
-
-    const handleDeleteAnalysis = async () => {
-        if (!deleteId) return;
-
-        try {
-            // TODO: Implementar método de eliminación en el servicio
-            await api.delete(`/conversational-workflow/${deleteId}`);
-            toast({
-                title: 'Éxito',
-                description: 'Análisis conversacional eliminado exitosamente',
-                status: 'success',
-                duration: 3000,
-                isClosable: true,
-            });
-            await loadAnalyses();
-        } catch (error: any) {
-            toast({
-                title: 'Error',
-                description: error.response?.data?.error || 'Error al eliminar el análisis conversacional',
-                status: 'error',
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setDeleteId(null);
-            onDeleteClose();
         }
     };
 
@@ -406,17 +370,6 @@ const ConversationalAnalysisPage: React.FC = () => {
                                         >
                                             Abrir Chat
                                         </Button>
-                                        <IconButton
-                                            aria-label="Eliminar análisis"
-                                            icon={<Icon as={FiTrash2} />}
-                                            size="sm"
-                                            colorScheme="red"
-                                            variant="ghost"
-                                            onClick={() => {
-                                                setDeleteId(analysis.id);
-                                                onDeleteOpen();
-                                            }}
-                                        />
                                     </HStack>
                                 </VStack>
                             </CardBody>
@@ -499,33 +452,6 @@ const ConversationalAnalysisPage: React.FC = () => {
                 </ModalContent>
             </Modal>
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog
-                isOpen={isDeleteOpen}
-                leastDestructiveRef={cancelRef}
-                onClose={onDeleteClose}
-            >
-                <AlertDialogOverlay>
-                    <AlertDialogContent>
-                        <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                            Eliminar Análisis
-                        </AlertDialogHeader>
-
-                        <AlertDialogBody>
-                            ¿Está seguro de que desea eliminar este análisis? Esta acción no se puede deshacer.
-                        </AlertDialogBody>
-
-                        <AlertDialogFooter>
-                            <Button ref={cancelRef} onClick={onDeleteClose}>
-                                Cancelar
-                            </Button>
-                            <Button colorScheme="red" onClick={handleDeleteAnalysis} ml={3}>
-                                Eliminar
-                            </Button>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialogOverlay>
-            </AlertDialog>
         </Container>
     );
 };

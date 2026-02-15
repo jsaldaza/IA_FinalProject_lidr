@@ -68,19 +68,54 @@ export default function Projects() {
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const isDev = import.meta.env.DEV === true;
 
+    const extractItems = (resp: any) => {
+        const payload = resp?.data ?? resp;
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.items)) return payload.items;
+        return [] as Analysis[];
+    };
+
+    const normalizeAnalysis = (proj: any): Analysis & { progress?: number } => {
+        const completeness = proj?.progress ?? proj?.completeness;
+        const progress = typeof completeness === 'number'
+            ? completeness
+            : typeof completeness?.overallScore === 'number'
+                ? completeness.overallScore
+                : 0;
+
+        return {
+            id: proj?.id ?? '',
+            title: proj?.title ?? proj?.name ?? 'Proyecto',
+            name: proj?.name ?? proj?.title ?? 'Proyecto',
+            description: proj?.description ?? proj?.requirement ?? '',
+            status: (proj?.status ?? 'IN_PROGRESS').toString(),
+            createdAt: proj?.createdAt ?? new Date().toISOString(),
+            updatedAt: proj?.updatedAt ?? proj?.createdAt ?? new Date().toISOString(),
+            projectId: proj?.projectId,
+            hasTestCases: !!proj?.hasTestCases,
+            requirement: proj?.requirement,
+            summary: proj?.summary,
+            redFlags: proj?.redFlags,
+            questions: proj?.questions,
+            testStrategies: proj?.testStrategies,
+            results: proj?.results,
+            progress
+        };
+    };
+
+    const getAnalysisProgress = (analysis: Analysis & { progress?: number }) => {
+        const candidate = analysis.progress ?? (analysis as any).completeness;
+        if (typeof candidate === 'number') return candidate;
+        if (candidate && typeof candidate.overallScore === 'number') return candidate.overallScore;
+        return 0;
+    };
+
     if (inProgressLoading || completedLoading) {
         return <Loading message="Cargando proyectos..." />;
     }
 
-    const inProgressProjects: Analysis[] = Array.isArray(inProgressResponse?.data) ? inProgressResponse.data : [];
-    // El backend devuelve completados como { success: true, data: { items: [...] } }
-    const completedProjects: Analysis[] = Array.isArray(completedResponse?.data)
-        ? completedResponse.data
-        : (() => {
-            const d = (completedResponse as unknown) as { data?: { items?: Analysis[] } } | undefined;
-            if (d && Array.isArray(d.data?.items)) return d.data!.items as Analysis[];
-            return [] as Analysis[];
-        })();
+    const inProgressProjects = extractItems(inProgressResponse).map(normalizeAnalysis);
+    const completedProjects = extractItems(completedResponse).map(normalizeAnalysis);
 
     // Debug logs to help diagnose why lists are empty
     console.debug('Projects page - inProgressResponse:', inProgressResponse);
@@ -302,8 +337,8 @@ export default function Projects() {
                         gridTemplateColumns="repeat(auto-fit, minmax(400px, 1fr))" 
                         gap={6}
                     >
-                        {inProgressProjects.map((analysis: Analysis) => {
-                            const progress = getProgressValue(analysis.status, 50); // Placeholder progress for in-progress projects
+                        {inProgressProjects.map((analysis: Analysis & { progress?: number }) => {
+                            const progress = getProgressValue(analysis.status, getAnalysisProgress(analysis));
                             const statusColorScheme = getStatusColor(analysis.status);
                             const statusText = getStatusText(analysis.status);
                             return (
@@ -412,8 +447,8 @@ export default function Projects() {
                         gridTemplateColumns="repeat(auto-fit, minmax(400px, 1fr))" 
                         gap={6}
                     >
-                        {completedProjects.map((analysis: Analysis) => {
-                            const progress = 100; // Completados
+                        {completedProjects.map((analysis: Analysis & { progress?: number }) => {
+                            const progress = Math.max(90, getAnalysisProgress(analysis) || 0);
                             // Forzar esquema verde para proyectos completados
                             const statusColorScheme = 'green';
                             const statusText = getStatusText(analysis.status || 'completed');

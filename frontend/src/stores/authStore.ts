@@ -60,29 +60,29 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         try {
             set({ loading: true, error: null });
 
-            // The backend sometimes returns an envelope { status, data: { user, token } }
-            // but our client helpers often unwrap responses and return { user, token } directly.
-            // Handle both shapes defensively to avoid destructuring undefined.
-            const respUnknown = await auth.login({ email, password }) as unknown;
+            const resp = await auth.login({ email, password }) as unknown;
 
-            let token: string | undefined;
-            let user: User | undefined;
-
-            if (respUnknown && typeof respUnknown === 'object') {
-                const respObj = respUnknown as Record<string, unknown>;
-                if ('data' in respObj && respObj.data && typeof respObj.data === 'object') {
-                    const dataObj = respObj.data as Record<string, unknown>;
-                    token = (dataObj.token as string | undefined) ?? undefined;
-                    user = (dataObj.user as User | undefined) ?? undefined;
-                } else {
-                    token = (respObj.token as string | undefined) ?? undefined;
-                    user = (respObj.user as User | undefined) ?? undefined;
+            const parseAuthPayload = (payload: any) => {
+                if (!payload || typeof payload !== 'object') return { token: undefined, user: undefined };
+                if ('token' in payload || 'user' in payload) {
+                    return {
+                        token: (payload as any).token as string | undefined,
+                        user: (payload as any).user as User | undefined
+                    };
                 }
-            }
+                if (payload.data && typeof payload.data === 'object') {
+                    return {
+                        token: (payload.data as any).token as string | undefined,
+                        user: (payload.data as any).user as User | undefined
+                    };
+                }
+                return { token: undefined, user: undefined };
+            };
+
+            const { token, user } = parseAuthPayload(resp);
 
             if (!token || !user) {
-                // Log a safe, non-sensitive error and throw a user-friendly message
-                console.error('Login: unexpected response shape', { resp: respUnknown });
+                console.error('Login: unexpected response shape', { resp });
                 throw new Error('Invalid login response from server');
             }
 

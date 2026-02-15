@@ -12,7 +12,7 @@ Plataforma de testing asistida por IA: genera, gestiona y analiza casos de prueb
 - [backend](backend): API REST y servicios IA
 - [frontend](frontend): SPA de dashboard y chat
 - [docs](docs): documentación vigente (ver índice en [docs/README.md](docs/README.md))
-- [scripts](scripts), [tools](tools), [test](test): utilidades y fixtures
+- scripts/tools: utilidades y fixtures (la carpeta scripts/ fue podada; ver tareas en package.json)
 
 ## Requisitos
 - Node.js 20+
@@ -21,7 +21,12 @@ Plataforma de testing asistida por IA: genera, gestiona y analiza casos de prueb
 - Redis opcional (`REDIS_URL`)
 
 ## Setup rápido (Windows)
-1) Backend
+1) Instala dependencias en la raíz (workspaces)
+```
+npm install
+```
+
+2) Backend
 ```
 cd backend
 npm install
@@ -42,27 +47,34 @@ Ejecuta:
 npm run dev
 ```
 
-2) Frontend
+3) Frontend
 ```
 cd frontend
 npm install
 ```
-Configura `.env.local` (Vite):
+Configura `.env` (Vite):
 ```
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3000/api
 ```
 Arranca:
 ```
 npm run dev -- --host --port 5173
 ```
 
-3) Scripts rápidos (Windows)
-- Instalación automatizada: [instalar-testforge.bat](instalar-testforge.bat)
-- Levantar ambos servicios: [ejecutar-proyecto.bat](ejecutar-proyecto.bat)
+4) Scripts rápidos (Windows)
+- Instalación automatizada: instalar-testforge.bat (obsoleta para rutas actuales; usar pasos manuales arriba)
+- Levantar ambos servicios: ejecutar-proyecto.bat (actualizar rutas si usas otra carpeta)
 
 ## Tests y calidad
+- Monorepo: `npm run lint` y `npm run test` (ejecuta backend y frontend desde raíz)
 - Backend: `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run test:coverage`
-- Lint: `npm run lint` (backend), `npm run lint` (frontend)
+- Frontend: `npm run test:run`, `npm run test:coverage`
+
+## API rápida (principales)
+- Auth: `/api/auth/login`, `/api/auth/register`, `/api/auth/profile`
+- Proyectos: `/api/projects/in-progress`, `/api/projects/completed`, `/api/projects/:id/status`, `/api/projects/:id/chat`, `/api/projects/:id/messages`
+- Test Cases: `/api/test-cases` (GET), `/api/test-cases/generate` (POST con `conversationalAnalysisId` o `projectId`)
+- Conversational workflow: `/api/conversational-workflow/user/completed`, `/api/conversational-workflow/:id/chat`, `/api/conversational-workflow/:id/summit`
 
 ## Documentación
 Consulta el índice unificado en [docs/README.md](docs/README.md) para arquitectura, operaciones, roadmap y estado de entregables.

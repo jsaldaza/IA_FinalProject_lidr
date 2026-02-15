@@ -56,7 +56,6 @@ import {
     FiTarget,
     FiSettings
 } from 'react-icons/fi';
-import api from '../../lib/api';
 import { conversationalWorkflowService } from '../../services/conversationalWorkflow.service';
 import Loading from '../../components/Loading';
 
@@ -79,13 +78,13 @@ interface ConversationalAnalysis {
     description: string;
     epicContent: string;
     currentPhase: 'ANALYSIS' | 'STRATEGY' | 'TEST_PLANNING' | 'COMPLETED';
-    status: 'IN_PROGRESS' | 'READY_TO_ADVANCE' | 'COMPLETED';
-    completeness: {
-        functionalCoverage: number;
-        nonFunctionalCoverage: number;
-        businessRulesCoverage: number;
-        acceptanceCriteriaCoverage: number;
-        overallScore: number;
+    status: 'IN_PROGRESS' | 'READY_TO_ADVANCE' | 'COMPLETED' | 'SUBMITTED' | 'REOPENED';
+    completeness: number | {
+        functionalCoverage?: number;
+        nonFunctionalCoverage?: number;
+        businessRulesCoverage?: number;
+        acceptanceCriteriaCoverage?: number;
+        overallScore?: number;
     };
     messages: ConversationalMessage[];
     createdAt: string;
@@ -105,7 +104,6 @@ const ConversationalChatPage: React.FC = () => {
     const [analysis, setAnalysis] = useState<ConversationalAnalysis | null>(null);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
-    const [advancing, setAdvancing] = useState(false);
     const [message, setMessage] = useState('');
     const [artifactContent, setArtifactContent] = useState('');
     
@@ -123,13 +121,8 @@ const ConversationalChatPage: React.FC = () => {
         
         try {
             setLoading(true);
-            const response = await api.get(`/conversational-workflow/${id}/status`);
-            
-            if (response.data.success) {
-                setAnalysis(response.data.data);
-            } else {
-                throw new Error('Analysis not found');
-            }
+            const response = await conversationalWorkflowService.getWorkflowStatus(id);
+            setAnalysis(response);
         } catch (error: any) {
             console.error('Error loading analysis:', error);
             toast({
@@ -167,23 +160,20 @@ const ConversationalChatPage: React.FC = () => {
         setSending(true);
 
         try {
-            const response = await api.post(`/conversational-workflow/${id}/chat`, {
+            const response = await conversationalWorkflowService.sendMessage(id, {
                 content: userMessage
             });
 
-            if (response.data.success) {
-                // Reload analysis to get updated messages
-                await loadAnalysis();
-                
-                if (response.data.data.phaseComplete) {
-                    toast({
-                        title: '🎯 Fase Completada',
-                        description: 'Esta fase está completa. Puedes avanzar a la siguiente etapa.',
-                        status: 'success',
-                        duration: 5000,
-                        isClosable: true,
-                    });
-                }
+            await loadAnalysis();
+            
+            if (response?.phaseComplete) {
+                toast({
+                    title: '🎯 Fase Completada',
+                    description: 'Esta fase está completa. Puedes avanzar a la siguiente etapa.',
+                    status: 'success',
+                    duration: 5000,
+                    isClosable: true,
+                });
             }
         } catch (error: any) {
             console.error('Error sending message:', error);
@@ -197,38 +187,6 @@ const ConversationalChatPage: React.FC = () => {
         } finally {
             setSending(false);
             inputRef.current?.focus();
-        }
-    };
-
-    const handleAdvancePhase = async () => {
-        if (!id || advancing) return;
-
-        setAdvancing(true);
-
-        try {
-            const response = await api.post(`/conversational-workflow/${id}/advance`);
-            
-            if (response.data.success) {
-                await loadAnalysis();
-                toast({
-                    title: '⏭️ Fase Avanzada',
-                    description: `Has avanzado a la fase: ${response.data.data.currentPhase}`,
-                    status: 'success',
-                    duration: 5000,
-                    isClosable: true,
-                });
-            }
-        } catch (error: any) {
-            console.error('Error advancing phase:', error);
-            toast({
-                title: 'Error',
-                description: error.response?.data?.error || 'Error al avanzar de fase',
-                status: 'error',
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setAdvancing(false);
         }
     };
 
@@ -282,38 +240,10 @@ const ConversationalChatPage: React.FC = () => {
         }
     };
 
-    const handleMarkAsCompleted = async () => {
-        if (!id) return;
-
-        try {
-            setAdvancing(true);
-            
-            // Llamar al endpoint para marcar como completado
-            await conversationalWorkflowService.submitPhase(id);
-            
-            toast({
-                title: 'Análisis Completado',
-                description: 'El análisis ha sido marcado como completado exitosamente',
-                status: 'success',
-                duration: 3000,
-                isClosable: true,
-            });
-
-            // Recargar el análisis para reflejar el nuevo estado
-            await loadAnalysis();
-            
-        } catch (error: any) {
-            console.error('Error marking analysis as completed:', error);
-            toast({
-                title: 'Error',
-                description: 'No se pudo completar el análisis. Intenta de nuevo.',
-                status: 'error',
-                duration: 5000,
-                isClosable: true,
-            });
-        } finally {
-            setAdvancing(false);
-        }
+    const overallScore = (analysisItem: ConversationalAnalysis | null) => {
+        if (!analysisItem) return 0;
+        const raw = analysisItem.completeness as any;
+        return typeof raw === 'number' ? raw : raw?.overallScore ?? 0;
     };
 
     if (loading) {
@@ -372,19 +302,6 @@ const ConversationalChatPage: React.FC = () => {
                             </HStack>
 
                             <HStack>
-                                {analysis.status === 'READY_TO_ADVANCE' && analysis.currentPhase !== 'COMPLETED' && (
-                                    <Button
-                                        colorScheme="green"
-                                        size="sm"
-                                        leftIcon={<Icon as={FiCheckCircle} />}
-                                        onClick={handleAdvancePhase}
-                                        isLoading={advancing}
-                                        loadingText="Avanzando..."
-                                    >
-                                        Enviar Fase
-                                    </Button>
-                                )}
-                                
                                 <Menu>
                                     <MenuButton
                                         as={IconButton}
@@ -415,11 +332,11 @@ const ConversationalChatPage: React.FC = () => {
                                     Progreso General
                                 </Text>
                                 <Text fontSize="sm" color="gray.600">
-                                    {Math.round(analysis.completeness.overallScore)}%
+                                    {Math.round(overallScore(analysis))}%
                                 </Text>
                             </HStack>
                             <Progress
-                                value={analysis.completeness.overallScore}
+                                value={overallScore(analysis)}
                                 colorScheme={getPhaseColor(analysis.currentPhase)}
                                 size="sm"
                                 borderRadius="md"
@@ -531,24 +448,6 @@ const ConversationalChatPage: React.FC = () => {
                             </Box>
 
                             <Divider />
-
-                            {/* Completion Button */}
-                            {analysis.currentPhase !== 'COMPLETED' && (analysis.messages || []).length > 2 && (
-                                <Box w="full" px={4} pt={3}>
-                                    <Button
-                                        colorScheme="green"
-                                        variant="outline"
-                                        size="sm"
-                                        width="full"
-                                        leftIcon={<Icon as={FiCheckCircle} />}
-                                        onClick={() => handleMarkAsCompleted()}
-                                        isDisabled={sending || advancing}
-                                    >
-                                        Marcar Análisis como Completado
-                                    </Button>
-                                </Box>
-                            )}
-
                             {/* Input Area */}
                             <Box w="full" p={4} bg={bgColor}>
                                 <InputGroup size="lg">

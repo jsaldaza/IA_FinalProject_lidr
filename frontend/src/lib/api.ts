@@ -11,7 +11,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 10000, // 10 seconds timeout
+    timeout: 15000, // 15 segundos para endpoints con IA
 });
 
 // Request interceptor - Add authentication token with validation
@@ -132,12 +132,12 @@ function unwrapResponse<T>(response: AxiosResponse): T {
 export const auth = {
     login: async (credentials: { email: string; password: string }) => {
         const response = await api.post('/auth/login', credentials);
-    return unwrapResponse<unknown>(response);
+        return unwrapResponse<{ user: unknown; token: string }>(response);
     },
     
     register: async (userData: { email: string; password: string; name: string }) => {
         const response = await api.post('/auth/register', userData);
-    return unwrapResponse<unknown>(response);
+        return unwrapResponse<{ user: unknown; token: string }>(response);
     },
     
     logout: async () => {
@@ -147,7 +147,7 @@ export const auth = {
     
     getProfile: async () => {
         const response = await api.get('/auth/profile');
-    return unwrapResponse<unknown>(response);
+        return unwrapResponse<unknown>(response);
     },
 };
 
@@ -231,37 +231,32 @@ export const dashboard = {
     },
 };
 
-// Test Cases API endpoints - CORREGIDOS PARA COINCIDIR CON BACKEND
+// Test Cases API endpoints - normalizados para coincidir con backend
+const normalizeTestCasePayload = (raw: any): unknown[] => {
+    if (!raw) return [];
+
+    const data = raw.data ?? raw;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.testCases)) return data.testCases;
+    if (Array.isArray(raw?.testCases)) return raw.testCases;
+    return [];
+};
+
 export const testCases = {
     // Obtener casos de prueba del usuario autenticado
-    getAll: async () => {
+    getAll: async (): Promise<unknown[]> => {
         const response = await api.get('/test-cases');
-        const d = response.data as unknown;
-        
-        console.log('🧪 API: Raw response.data:', d);
-        
-        // Backend devuelve: { status: 'success', data: [...] }
-        if (d && typeof d === 'object') {
-            const rec = d as Record<string, unknown>;
-            if (rec.status === 'success' && Array.isArray(rec.data)) {
-                console.log('🧪 API: Returning rec.data:', rec.data.length, 'items');
-                return rec.data as unknown[];
-            }
-            if (Array.isArray(rec.data)) return rec.data as unknown[];
-            if (Array.isArray(rec.items)) return rec.items as unknown[];
-        }
-        
-        const result = Array.isArray(d) ? (d as unknown[]) : [];
-        console.log('🧪 API: Fallback result:', result.length, 'items');
-        return result;
+        return normalizeTestCasePayload(response.data);
     },
     
-    // Generar casos de prueba con IA desde un proyecto completado
-    generateFromProject: async (conversationalAnalysisId: string) => {
-        const response = await api.post('/test-cases/generate', {
-            conversationalAnalysisId
-        });
-        return response.data;
+    // Generar casos de prueba con IA (acepta conversationalAnalysisId o projectId)
+    generate: async (payload: { conversationalAnalysisId?: string; projectId?: string }) => {
+        const response = await api.post('/test-cases/generate', payload);
+        return {
+            testCases: normalizeTestCasePayload(response.data),
+            message: response.data?.message as string | undefined,
+        };
     },
     
     // NOTE: create/update/delete helpers were removed because the backend does not

@@ -123,32 +123,12 @@ export function validateRequest(
   };
 }
 
-/**
- * Middleware de validación simplificado para casos comunes
- */
-export function validateBody<T>(schema: ZodSchema<T>, options?: ValidationOptions) {
-  return validateRequest({ body: schema }, options);
-}
-
 export function validateQuery<T>(schema: ZodSchema<T>, options?: ValidationOptions) {
   return validateRequest({ query: schema }, options);
 }
 
 export function validateParams<T>(schema: ZodSchema<T>, options?: ValidationOptions) {
   return validateRequest({ params: schema }, options);
-}
-
-/**
- * Middleware especializado para validar IDs de UUID
- */
-export function validateUuidParam(paramName: string = 'id') {
-  const schema = z.object({
-    [paramName]: z.string().uuid(`${paramName} debe ser un UUID válido`)
-  });
-  
-  return validateParams(schema, {
-    errorPrefix: `Parámetro ${paramName} inválido`
-  });
 }
 
 /**
@@ -162,49 +142,6 @@ export function validateObjectIdParam(paramName: string = 'id') {
   return validateParams(schema, {
     errorPrefix: `Parámetro ${paramName} inválido`
   });
-}
-
-/**
- * Middleware para validar paginación estándar
- */
-export function validatePagination() {
-  const schema = z.object({
-    page: z.union([z.string(), z.number()])
-      .optional()
-      .transform(val => val ? (typeof val === 'string' ? parseInt(val) : val) : 1)
-      .pipe(z.number().min(1, 'La página debe ser mayor a 0')),
-    
-    limit: z.union([z.string(), z.number()])
-      .optional()
-      .transform(val => val ? (typeof val === 'string' ? parseInt(val) : val) : 10)
-      .pipe(z.number().min(1, 'El límite debe ser mayor a 0').max(100, 'El límite máximo es 100')),
-    
-    search: z.string().trim().optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional()
-  });
-
-  return validateQuery(schema, {
-    errorPrefix: 'Parámetros de paginación inválidos'
-  });
-}
-
-/**
- * Utility para crear validaciones condicionales
- * Ejemplo: solo validar si cierto campo está presente
- */
-export function conditionalValidation<T>(
-  condition: (req: Request) => boolean,
-  schema: ZodSchema<T>,
-  options?: ValidationOptions
-) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (condition(req)) {
-      validateRequest({ body: schema }, options)(req, res, next);
-      return;
-    }
-    next();
-  };
 }
 
 // Re-exportar para compatibilidad con código existente

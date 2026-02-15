@@ -29,7 +29,7 @@
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "postinstall": "if [ -n \"$CI\" ] || [ \"$HUSKY\" = \"0\" ]; then echo 'Skipping husky (CI/HUSKY=0)'; elif command -v husky >/dev/null 2>&1; then husky install; else echo 'Husky not installed; skipping'; fi"
+    "postinstall": "node -e \"const { execSync } = require('child_process'); const { CI, HUSKY } = process.env; if (CI || HUSKY === '0') { console.log('Skipping husky (CI/HUSKY=0)'); process.exit(0); } try { execSync('npx husky install', { stdio: 'inherit' }); } catch (err) { console.log('Husky not installed; skipping'); }\""
   },
   "keywords": [
     "testing",

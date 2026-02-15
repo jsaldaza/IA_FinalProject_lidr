@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
     Box,
     Container,
@@ -56,37 +56,31 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import Loading from '../components/Loading';
 import { projects as projectsApi, testCases as testCasesApi } from '../lib/api';
-import api from '../lib/api';
+import { conversationalWorkflowService } from '../services/conversationalWorkflow.service';
 
 // Types
 interface TestCaseData {
     id: string;
-    title: string;
+    title?: string;
     description?: string;
-    generatedByAI: boolean;
-    createdAt: string;
-    analysis?: {
-        id: string;
-        requirement: string;
-        project?: {
-            id: string;
-            name?: string;
-            title?: string;
-        };
-    };
+    generatedByAI?: boolean;
+    createdAt?: string;
+    priority?: string;
+    category?: string;
+    reviewStatus?: string;
     conversationalAnalysis?: {
         id: string;
-        title: string;
-        description: string;
-        status: string;
+        title?: string;
+        description?: string;
+        status?: string;
     };
 }
 
-interface AnalysisData {
+interface WorkflowSummary {
     id: string;
     name?: string;
     title?: string;
-    projectId?: string | null;
+    status?: string;
 }
 
 interface ProjectData {
@@ -118,82 +112,111 @@ const TestCases = memo(() => {
     const borderColor = useColorModeValue('gray.200', 'gray.700');
 
     // Fetch all completed analyses for selection (con nombre amigable)
-    const { data: analyses, isLoading: analysesLoading } = useQuery({
-        queryKey: ['analyses-completed'],
+    const { data: completedWorkflows, isLoading: workflowsLoading } = useQuery({
+        queryKey: ['conversational-workflows', 'completed'],
         queryFn: async () => {
             try {
-                const result = await projectsApi.getCompleted();
-                // Backend responde con { success, data: { items: [...] } }
-                return result.data?.items || [];
+                return await conversationalWorkflowService.getCompletedWorkflows();
             } catch (error) {
-                console.error('Error fetching completed projects:', error);
-                return [];
+                console.error('Error fetching completed workflows:', error);
+                return [] as WorkflowSummary[];
             }
-        }
+        },
+        onError: () => {
+            toast({
+                title: 'No se pudieron cargar los levantamientos',
+                description: 'Reintenta en unos segundos o verifica tu conexión.',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        },
     });
 
     // Fetch generated test cases
-    const { data: testCasesList, isLoading: casesLoading, refetch: refetchCases } = useQuery({
+    const { data: testCasesList = [], isLoading: casesLoading, refetch: refetchCases } = useQuery<TestCaseData[]>({
         queryKey: ['testCases'],
         queryFn: async () => {
             try {
                 const result = await testCasesApi.getAll();
-                console.log('🧪 Frontend: Raw API result:', {
-                    type: typeof result,
-                    isArray: Array.isArray(result),
-                    length: Array.isArray(result) ? result.length : 'N/A',
-                    firstItem: Array.isArray(result) && result.length > 0 ? {
-                        id: result[0]?.id,
-                        title: result[0]?.title,
-                        description: result[0]?.description
-                    } : 'No items'
-                });
-                return result || [];
+                return Array.isArray(result) ? (result as TestCaseData[]) : [];
             } catch (error) {
                 console.error('Error fetching test cases:', error);
-                return [];
+                return [] as TestCaseData[];
             }
-        }
+        },
+        onError: () => {
+            toast({
+                title: 'No se pudieron cargar los casos de prueba',
+                description: 'Intenta recargar la página o generar nuevamente.',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        },
     });
 
     // Fetch projects as fallback when there are no completed analyses
     const { data: projects, isLoading: projectsLoading } = useQuery({
-        queryKey: ['projects-list'],
+        queryKey: ['projects-completed'],
         queryFn: async () => {
             try {
-                // Use the projects API wrapper which knows the backend shape
-                const result = await projectsApi.getInProgress();
-                // Backend returns { status: 'success', data: [...] } for in-progress
-                return (result && result.data) ? result.data : (Array.isArray(result) ? result : []);
+                const result = await projectsApi.getCompleted();
+                const payload = result?.data ?? result;
+                if (Array.isArray(payload?.items)) return payload.items;
+                if (Array.isArray(payload)) return payload;
+                return [];
             } catch (err) {
                 console.error('Error fetching projects fallback:', err);
                 return [];
             }
-        }
+        },
+        onError: () => {
+            toast({
+                title: 'No se pudieron cargar los proyectos',
+                description: 'Revisa tu conexión o vuelve a intentar.',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        },
     });
 
     // Build select items preferring analyses, else projects
-    const selectItems: SelectItem[] = (analyses && analyses.length > 0)
-        ? (analyses as AnalysisData[]).map(a => ({ id: a.id, name: a.name || a.title, type: 'analysis' }))
-        : ((projects as ProjectData[] | undefined) || []).map(p => ({ id: p.id, name: p.name || p.title, type: 'project' }));
+    const selectItems: SelectItem[] = (completedWorkflows && completedWorkflows.length > 0)
+        ? (completedWorkflows as WorkflowSummary[]).map((w) => ({ id: w.id, name: w.name || w.title, type: 'analysis' }))
+        : ((projects as ProjectData[] | undefined) || []).map((p) => ({ id: p.id, name: p.name || p.title, type: 'project' }));
 
     // Generate test cases mutation
     const generateTestCases = async (selectedId: string) => {
+        if (!selectedId) return;
+
         setIsGenerating(true);
         try {
-            // selectedId comes as "type:id"
-            const [type, id] = selectedId.includes(':') ? selectedId.split(':', 2) as ['analysis' | 'project', string] : ['analysis', selectedId];
+            const [type, id] = selectedId.includes(':')
+                ? (selectedId.split(':', 2) as ['analysis' | 'project', string])
+                : ['analysis', selectedId];
 
-            const result = await api.post('/test-cases/generate',
-                type === 'analysis' ? { conversationalAnalysisId: id } : { projectId: id }
-            );
-            toast({ title: 'Casos de prueba generados', description: `Se generaron ${result.data.length} casos de prueba exitosamente`, status: 'success', duration: 5000, isClosable: true });
+            const payload = type === 'analysis' ? { conversationalAnalysisId: id } : { projectId: id };
+            const result = await testCasesApi.generate(payload);
+            const generatedCount = Array.isArray(result.testCases) ? result.testCases.length : 0;
+
+            toast({
+                title: 'Casos de prueba generados',
+                description: result.message || `Se generaron ${generatedCount} casos de prueba exitosamente`,
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+
             refetchCases();
             onGenerateClose();
+            setSelectedProjectId('');
         } catch (error) {
+            const description = (error as any)?.response?.data?.error || (error instanceof Error ? error.message : 'Error al generar casos de prueba');
             toast({
                 title: 'Error',
-                description: error instanceof Error ? error.message : 'Error al generar casos de prueba',
+                description,
                 status: 'error',
                 duration: 5000,
                 isClosable: true
@@ -216,102 +239,56 @@ const TestCases = memo(() => {
         });
     };
 
-    // Agrupar casos de prueba por proyecto - versión mejorada
-    // Defensive: ensure we have an array before reducing (server may return HTML or object on error)
-    console.log('🧪 Frontend: testCasesList received:', {
-        type: typeof testCasesList,
-        isArray: Array.isArray(testCasesList),
-        length: Array.isArray(testCasesList) ? testCasesList.length : 'N/A',
-        content: testCasesList
-    });
+    const normalizedTestCases = useMemo(() => {
+        if (!Array.isArray(testCasesList)) return [] as TestCaseData[];
+        return (testCasesList as TestCaseData[]).map((tc) => ({
+            ...tc,
+            createdAt: tc.createdAt || new Date().toISOString(),
+        }));
+    }, [testCasesList]);
 
-    const _casesArray: TestCaseData[] = Array.isArray(testCasesList)
-        ? testCasesList as TestCaseData[]
-        : ((): TestCaseData[] => {
-            const possible = testCasesList as unknown;
-            if (possible && typeof possible === 'object' && 'data' in possible) {
-                const inner = (possible as Record<string, unknown>).data;
-                if (Array.isArray(inner)) return inner as TestCaseData[];
+    const groupedTestCases = useMemo(() => {
+        return normalizedTestCases.reduce((groups: Record<string, ProjectGroup>, testCase: TestCaseData) => {
+            const projectId = testCase.conversationalAnalysis?.id || 'sin-analisis';
+            const projectName = testCase.conversationalAnalysis?.title || 'Análisis sin título';
+
+            if (!groups[projectId]) {
+                groups[projectId] = {
+                    id: projectId,
+                    name: projectName,
+                    items: [],
+                };
             }
-            return [];
-        })();
 
-    console.log('🧪 Frontend: _casesArray after processing:', {
-        length: _casesArray.length,
-        firstItem: _casesArray.length > 0 ? {
-            id: _casesArray[0]?.id,
-            title: _casesArray[0]?.title,
-            conversationalAnalysisId: _casesArray[0]?.conversationalAnalysis?.id
-        } : 'No items'
-    });
+            groups[projectId].items.push(testCase);
+            return groups;
+        }, {} as Record<string, ProjectGroup>);
+    }, [normalizedTestCases]);
 
-    const groupedTestCases = _casesArray.reduce((groups: Record<string, ProjectGroup>, testCase: TestCaseData) => {
-        // DEBUG: Log para entender la estructura de datos
-        console.log('🔍 TestCase structure:', {
-            id: testCase.id?.substring(0, 8),
-            title: testCase.title,
-            hasAnalysis: !!testCase.analysis,
-            hasConversationalAnalysis: !!testCase.conversationalAnalysis,
-            conversationalTitle: testCase.conversationalAnalysis?.title,
-            analysisProject: testCase.analysis?.project?.title || testCase.analysis?.project?.name
-        });
-
-        // Primero verificamos explícitamente si el caso de prueba está asociado a un análisis con un proyecto
-        let projectId = 'no-project';
-        let projectName = 'Sin Proyecto';
-        
-        if (testCase.analysis?.project?.id) {
-            // Si el análisis tiene un proyecto, usamos su ID
-            projectId = testCase.analysis.project.id;
-            projectName = testCase.analysis.project.name || testCase.analysis.project.title || 'Proyecto Sin Nombre';
-        } else if (testCase.conversationalAnalysis?.id) {
-            // Si está asociado a un análisis conversacional, usamos ese como proyecto
-            projectId = testCase.conversationalAnalysis.id;
-            projectName = testCase.conversationalAnalysis.title || 'Análisis Sin Título';
-        } else if (testCase.analysis?.requirement) {
-            // Si no hay proyecto pero hay requerimiento, podemos intentar extraer un nombre
-            // del requerimiento para usarlo como identificador alternativo
-            const reqParts = testCase.analysis.requirement.split(':');
-            if (reqParts.length > 0 && reqParts[0].trim()) {
-                projectName = reqParts[0].trim();
-                // Usar el hash del nombre como ID para agrupar casos del mismo "proyecto virtual"
-                projectId = `req-${projectName.replace(/\s+/g, '-').toLowerCase()}`;
-            }
+    useEffect(() => {
+        if (normalizedTestCases.length > 0 && expandedProjects.size === 0) {
+            setExpandedProjects(new Set(Object.keys(groupedTestCases)));
         }
-        
-        console.log('🎯 Selected project:', { projectId: projectId.substring(0, 8), projectName });
-        
-        // Creamos el grupo si no existe
-        if (!groups[projectId]) {
-            groups[projectId] = {
-                id: projectId,
-                name: projectName,
-                items: []
-            };
-        }
-        
-        // Añadimos el caso de prueba al grupo
-        groups[projectId].items.push(testCase);
-        return groups;
-    }, {});
+    }, [normalizedTestCases, groupedTestCases, expandedProjects.size]);
 
-    console.log('🧪 Frontend: groupedTestCases result:', {
-        groupCount: Object.keys(groupedTestCases).length,
-        groups: Object.entries(groupedTestCases).map(([id, group]) => ({
-            id: id.substring(0, 8),
-            name: group.name,
-            itemCount: group.items.length
-        }))
-    });
+    const formatPriority = (priority?: string) => {
+        const level = (priority || 'MEDIUM').toUpperCase();
+        const colorMap: Record<string, string> = {
+            LOW: 'green',
+            MEDIUM: 'blue',
+            HIGH: 'orange',
+            CRITICAL: 'red',
+        };
+        const color = colorMap[level] || 'gray';
+        return <Badge colorScheme={color}>{level}</Badge>;
+    };
 
-    // Auto-expandir todos los grupos cuando hay datos
-    if (_casesArray.length > 0 && expandedProjects.size === 0) {
-        const allProjectIds = Object.keys(groupedTestCases);
-        console.log('🧪 Frontend: Auto-expanding projects:', allProjectIds);
-        setExpandedProjects(new Set(allProjectIds));
-    }
+    const formatStatus = (status?: string) => {
+        if (!status) return 'PENDING';
+        return status.replace(/_/g, ' ');
+    };
 
-    const isLoading = analysesLoading || projectsLoading || casesLoading;
+    const isLoading = workflowsLoading || projectsLoading || casesLoading;
 
     if (isLoading) {
         return <Loading message="Cargando datos..." />;
@@ -347,7 +324,7 @@ const TestCases = memo(() => {
                                 <VStack>
                                     <Icon as={FiCheckCircle} size="24px" color="green.500" />
                                     <Text fontSize="2xl" fontWeight="bold">
-                                        {testCasesList?.length || 0}
+                                        {normalizedTestCases.length}
                                     </Text>
                                     <Text fontSize="sm" color="gray.600">Total Cases</Text>
                                 </VStack>
@@ -358,7 +335,7 @@ const TestCases = memo(() => {
                                 <VStack>
                                     <Icon as={FiCpu} size="24px" color="purple.500" />
                                     <Text fontSize="2xl" fontWeight="bold">
-                                        {testCasesList?.length || 0}
+                                        {normalizedTestCases.length}
                                     </Text>
                                     <Text fontSize="sm" color="gray.600">Casos Generados</Text>
                                 </VStack>
@@ -370,10 +347,14 @@ const TestCases = memo(() => {
                                 <VStack>
                                     <Icon as={FiZap} size="24px" color="orange.500" />
                                     <Text fontSize="2xl" fontWeight="bold">
-                                        {(analyses?.length && analyses.length > 0) ? analyses.length : (projects?.length || 0)}
+                                        {(completedWorkflows?.length && completedWorkflows.length > 0)
+                                            ? completedWorkflows.length
+                                            : (projects?.length || 0)}
                                     </Text>
                                     <Text fontSize="sm" color="gray.600">
-                                        {(analyses?.length && analyses.length > 0) ? 'Levantamientos Disponibles' : 'Proyectos Disponibles'}
+                                        {(completedWorkflows?.length && completedWorkflows.length > 0)
+                                            ? 'Levantamientos Disponibles'
+                                            : 'Proyectos Disponibles'}
                                     </Text>
                                 </VStack>
                             </CardBody>
@@ -382,11 +363,11 @@ const TestCases = memo(() => {
                 </Box>
 
                 {/* Test Cases Content */}
-                {testCasesList && testCasesList.length > 0 ? (
+                {normalizedTestCases.length > 0 ? (
                     <VStack align="stretch" spacing={4}>
                         <HStack justify="space-between">
                             <Text fontSize="lg" fontWeight="semibold">
-                                Casos de Prueba ({testCasesList.length})
+                                Casos de Prueba ({normalizedTestCases.length})
                             </Text>
                             <Button
                                 size="sm"
@@ -444,7 +425,9 @@ const TestCases = memo(() => {
                                                 <Table variant="simple" size="sm">
                                                     <Thead position="sticky" top={0} bg={bgColor} zIndex={1}>
                                                         <Tr>
-                                                            <Th>Origen</Th>
+                                                            <Th>Análisis</Th>
+                                                            <Th>Prioridad</Th>
+                                                            <Th>Estado</Th>
                                                             <Th>Descripción</Th>
                                                             <Th>Creado</Th>
                                                             <Th width="50px">Acciones</Th>
@@ -454,19 +437,25 @@ const TestCases = memo(() => {
                                                         {group.items.map((testCase: TestCaseData) => (
                                                             <Tr key={testCase.id} _hover={{ bg: 'gray.50' }}>
                                                                 <Td>
-                                                                    <HStack>
-                                                                        <Icon 
-                                                                            as={FiCpu} 
-                                                                            color="purple.500" 
-                                                                        />
-                                                                        <Badge 
-                                                                            colorScheme="purple"
-                                                                            variant="subtle"
-                                                                            size="sm"
-                                                                        >
-                                                                            IA
-                                                                        </Badge>
-                                                                    </HStack>
+                                                                    <VStack align="start" spacing={1}>
+                                                                        <HStack spacing={2}>
+                                                                            <Icon as={FiCpu} color="purple.500" />
+                                                                            <Text fontWeight="semibold">
+                                                                                {testCase.conversationalAnalysis?.title || 'Análisis conversacional'}
+                                                                            </Text>
+                                                                        </HStack>
+                                                                        {testCase.conversationalAnalysis?.status && (
+                                                                            <Badge colorScheme="purple" variant="subtle">
+                                                                                {testCase.conversationalAnalysis.status}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </VStack>
+                                                                </Td>
+                                                                <Td>{formatPriority(testCase.priority)}</Td>
+                                                                <Td>
+                                                                    <Badge colorScheme="gray" variant="outline">
+                                                                        {formatStatus(testCase.reviewStatus)}
+                                                                    </Badge>
                                                                 </Td>
                                                                 <Td>
                                                                     <Text fontWeight="medium" noOfLines={2}>
@@ -475,7 +464,7 @@ const TestCases = memo(() => {
                                                                 </Td>
                                                                 <Td>
                                                                     <Text fontSize="sm" color="gray.500">
-                                                                        {new Date(testCase.createdAt).toLocaleDateString()}
+                                                                        {testCase.createdAt ? new Date(testCase.createdAt).toLocaleDateString() : '-'}
                                                                     </Text>
                                                                 </Td>
                                                                 <Td>

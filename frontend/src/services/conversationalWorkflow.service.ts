@@ -12,26 +12,30 @@ export interface ConversationalMessageRequest {
     content: string;
 }
 
+export type ConversationalCompleteness =
+    | number
+    | {
+          functionalCoverage?: number;
+          nonFunctionalCoverage?: number;
+          businessRulesCoverage?: number;
+          acceptanceCriteriaCoverage?: number;
+          overallScore?: number;
+      };
+
 export interface ConversationalWorkflowResponse {
     id: string;
     title: string;
     description: string;
     epicContent: string;
     currentPhase: 'ANALYSIS' | 'STRATEGY' | 'TEST_PLANNING' | 'COMPLETED';
-    status: 'IN_PROGRESS' | 'READY_TO_ADVANCE' | 'COMPLETED';
-    completeness: {
-        functionalCoverage: number;
-        nonFunctionalCoverage: number;
-        businessRulesCoverage: number;
-        acceptanceCriteriaCoverage: number;
-        overallScore: number;
-    };
+    status: 'IN_PROGRESS' | 'READY_TO_ADVANCE' | 'COMPLETED' | 'SUBMITTED' | 'REOPENED';
+    completeness: ConversationalCompleteness;
     messages: Array<{
         id: string;
         content: string;
         role: 'USER' | 'ASSISTANT';
         type: string;
-        timestamp: Date;
+        timestamp: Date | string;
         metadata?: {
             category?: string;
             phase?: string;
@@ -53,12 +57,76 @@ export interface ConversationalMessageResponse {
 }
 
 export const conversationalWorkflowService = {
+    normalizeCompleteness(raw: ConversationalCompleteness) {
+        const overallScore =
+            typeof raw === 'number'
+                ? raw
+                : typeof raw?.overallScore === 'number'
+                ? raw.overallScore
+                : 0;
+
+        const base = {
+            overallScore,
+            functionalCoverage: 0,
+            nonFunctionalCoverage: 0,
+            businessRulesCoverage: 0,
+            acceptanceCriteriaCoverage: 0
+        };
+
+        if (typeof raw === 'number') return base;
+        return { ...base, ...raw, overallScore };
+    },
+
+    normalizeWorkflow(raw: any): ConversationalWorkflowResponse {
+        const completeness = raw?.completeness ?? 0;
+        const messages = Array.isArray(raw?.messages)
+            ? raw.messages.map((m: any, idx: number) => ({
+                  id: m.id ?? `msg-${idx}`,
+                  content: m.content ?? '',
+                  role: (m.role as 'USER' | 'ASSISTANT') ?? 'ASSISTANT',
+                  type: m.type ?? m.messageType ?? 'unknown',
+                  timestamp: m.timestamp ?? m.createdAt ?? new Date().toISOString(),
+                  metadata: m.metadata ?? (m.category ? { category: m.category } : undefined)
+              }))
+            : [];
+
+        const projectId = raw?.projectId ?? raw?.project?.id;
+        const projectName = raw?.project?.name ?? raw?.projectName;
+
+        return {
+            id: raw?.id ?? raw?._id ?? `workflow-${Date.now()}`,
+            title: raw?.title ?? raw?.name ?? 'Análisis sin título',
+            description: raw?.description ?? '',
+            epicContent: raw?.epicContent ?? '',
+            currentPhase: raw?.currentPhase ?? 'ANALYSIS',
+            status: raw?.status ?? 'IN_PROGRESS',
+            completeness: this.normalizeCompleteness(completeness),
+            messages,
+            createdAt: raw?.createdAt ?? new Date().toISOString(),
+            updatedAt: raw?.updatedAt ?? raw?.createdAt ?? new Date().toISOString(),
+            project: projectId
+                ? {
+                      id: projectId,
+                      name: projectName ?? 'Proyecto'
+                  }
+                : undefined
+        };
+    },
+
+    extractItems(response: any) {
+        const data = response?.data?.data ?? response?.data;
+
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.items)) return data.items;
+        return [];
+    },
+
     /**
      * Crear nuevo flujo conversacional
      */
     async createWorkflow(data: ConversationalWorkflowRequest): Promise<ConversationalWorkflowResponse> {
         const response = await api.post('/conversational-workflow', data);
-        return response.data.data;
+        return this.normalizeWorkflow(response.data?.data ?? response.data);
     },
 
     /**
@@ -66,7 +134,7 @@ export const conversationalWorkflowService = {
      */
     async getWorkflowStatus(workflowId: string): Promise<ConversationalWorkflowResponse> {
         const response = await api.get(`/conversational-workflow/${workflowId}/status`);
-        return response.data.data;
+        return this.normalizeWorkflow(response.data?.data ?? response.data);
     },
 
     /**
@@ -78,37 +146,28 @@ export const conversationalWorkflowService = {
     },
 
     /**
-     * Avanzar a la siguiente fase
-     */
-    async advancePhase(workflowId: string): Promise<ConversationalWorkflowResponse> {
-        const response = await api.post(`/conversational-workflow/${workflowId}/advance`);
-        return response.data.data;
-    },
-
-    /**
-     * Enviar fase para revisión
-     */
-    async submitPhase(workflowId: string): Promise<ConversationalWorkflowResponse> {
-        const response = await api.post(`/conversational-workflow/${workflowId}/submit`);
-        return response.data.data;
-    },
-
-    /**
-     * Reabrir levantamiento de requisitos
-     */
-    async reopenAnalysis(workflowId: string, reason?: string): Promise<ConversationalWorkflowResponse> {
-        const response = await api.post(`/conversational-workflow/${workflowId}/reopen`, { reason });
-        return response.data.data;
-    },
-
-    /**
-     * Obtener todos los flujos del usuario
+     * Obtener flujos en progreso y completados, fusionados para UI
      */
     async getUserWorkflows(): Promise<ConversationalWorkflowResponse[]> {
-        const response = await api.get('/conversational-workflow/user/workflows');
-        return response.data.data;
-    }
-    ,
+        const [inProgressRes, completedRes] = await Promise.all([
+            api.get('/conversational-workflow/user/in-progress'),
+            api.get('/conversational-workflow/user/completed')
+        ]);
+
+        const inProgressRaw = this.extractItems(inProgressRes);
+        const completedRaw = this.extractItems(completedRes);
+
+        return [...inProgressRaw, ...completedRaw].map((workflow) => this.normalizeWorkflow(workflow));
+    },
+
+    /**
+     * Obtener solo los workflows completados del usuario (para generación de casos)
+     */
+    async getCompletedWorkflows(): Promise<ConversationalWorkflowResponse[]> {
+        const response = await api.get('/conversational-workflow/user/completed');
+        const items = this.extractItems(response);
+        return items.map((workflow) => this.normalizeWorkflow(workflow));
+    },
     /**
      * Obtener el summary final (summit) de un análisis
      */

@@ -31,6 +31,18 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
     },
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          chakra: ['@chakra-ui/react', '@emotion/react', '@emotion/styled', 'framer-motion'],
+          tanstack: ['@tanstack/react-query'],
+          recharts: ['recharts'],
+          axios: ['axios'],
+        },
+      },
+    },
   },
   test: {
     globals: true,

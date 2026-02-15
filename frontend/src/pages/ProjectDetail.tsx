@@ -6,28 +6,25 @@ import {
     VStack,
     HStack,
     Badge,
-    useColorModeValue,
-    useDisclosure
+    useColorModeValue
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiTrash2 } from 'react-icons/fi';
 import { useApiQuery, useApiMutation } from '../hooks/useApi';
-import type { Project } from '../types/api';
 import Loading from '../components/Loading';
 import Error from '../components/Error';
 
 export default function ProjectDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { onOpen } = useDisclosure();
 
     const safeId = id || '';
-    const { data, isLoading, error, refetch } = useApiQuery<Project>(
+    const { data, isLoading, error, refetch } = useApiQuery<{ id: string; title: string; description?: string; status: string; phase?: string; progress?: number; createdAt: string; updatedAt: string; messages?: unknown[] }>(
         ['project', safeId],
-        `/projects/${safeId}`
+        `/projects/${safeId}/status`
     );
 
-    const deleteMutation = useApiMutation<Project, void>(
+    const deleteMutation = useApiMutation<{ message?: string }, void>(
         `/projects/${safeId}`,
         'DELETE'
     );
@@ -70,6 +67,7 @@ export default function ProjectDetail() {
     }
 
     const project = data.data;
+    const progress = typeof project.progress === 'number' ? project.progress : 0;
 
     return (
         <Box>
@@ -82,15 +80,8 @@ export default function ProjectDetail() {
                     rounded="lg"
                 >
                     <HStack justify="space-between" mb={4}>
-                        <Heading size="lg">{project.name}</Heading>
+                        <Heading size="lg">{(project as any).title || (project as any).name || 'Proyecto'}</Heading>
                         <HStack>
-                            <Button
-                                leftIcon={<FiEdit2 />}
-                                onClick={onOpen}
-                                variant="outline"
-                            >
-                                Edit
-                            </Button>
                             <Button
                                 leftIcon={<FiTrash2 />}
                                 colorScheme="red"
@@ -103,15 +94,21 @@ export default function ProjectDetail() {
                     </HStack>
 
                     <Text color="gray.500" mb={4}>
-                        {project.description}
+                        {project.description || 'Sin descripción'}
                     </Text>
 
                     <HStack spacing={4}>
                         <Badge colorScheme="blue">
                             Status: {project.status}
                         </Badge>
+                        {project.phase && (
+                            <Badge colorScheme="purple">Fase: {project.phase}</Badge>
+                        )}
                         <Badge colorScheme="green">
-                            Created: {new Date(project.createdAt).toLocaleDateString()}
+                            Progreso: {Math.round(progress)}%
+                        </Badge>
+                        <Badge colorScheme="green">
+                            Creado: {new Date(project.createdAt).toLocaleDateString()}
                         </Badge>
                     </HStack>
                 </Box>
