@@ -28,6 +28,25 @@ const sendMessageSchema = z.union([
 export class ProjectsController {
 
   /**
+   * Normaliza IDs provenientes de params/query que pueden ser string o string[] (Express v5).
+   * Retorna el primer string no vacío o lanza ValidationError si es inválido.
+   */
+  private normalizeId(idParam: string | string[] | undefined, fieldName = 'id'): string {
+    if (typeof idParam === 'string' && idParam.trim().length > 0) {
+      return idParam;
+    }
+
+    if (Array.isArray(idParam)) {
+      const candidate = idParam.find(part => typeof part === 'string' && part.trim().length > 0);
+      if (candidate) {
+        return candidate;
+      }
+    }
+
+    throw new ValidationError(`Parámetro ${fieldName} inválido`);
+  }
+
+  /**
    * POST /api/projects/quick-create
    * Crear proyecto rápido solo con título para luego desarrollar en chat
    */
@@ -242,7 +261,7 @@ export class ProjectsController {
         throw new UnauthorizedError('Usuario no autenticado');
       }
 
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const updates = req.body || {};
 
       const allowed: UpdateProjectData = {};
@@ -279,7 +298,7 @@ export class ProjectsController {
       const userId = req.user?.id;
       if (!userId) throw new UnauthorizedError('Usuario no autenticado');
 
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
 
       // Obtener análisis actual
   const existing = await conversationalDatabaseService.getAnalysisById(id);
@@ -521,7 +540,7 @@ export class ProjectsController {
    */
   async getProjectStatus(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const userId = req.user?.id;
 
       if (!userId) {
@@ -567,7 +586,7 @@ export class ProjectsController {
    */
   async getMessages(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const userId = req.user?.id;
 
       if (!userId) {
@@ -613,7 +632,7 @@ export class ProjectsController {
    */
   async sendMessage(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const userId = req.user?.id;
 
       if (!userId) {
@@ -662,7 +681,7 @@ export class ProjectsController {
    */
   async deleteProject(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const userId = req.user?.id;
 
       if (!userId) {
@@ -686,7 +705,7 @@ export class ProjectsController {
    */
   async completeProject(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const userId = req.user?.id;
 
       if (!userId) {
@@ -812,7 +831,7 @@ export class ProjectsController {
    */
   async updateAnalysis(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const { analysis } = req.body;
       const userId = req.user?.id;
 
@@ -865,7 +884,7 @@ export class ProjectsController {
    */
   async restartChatWithAnalysis(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const { id } = req.params;
+      const id: string = this.normalizeId(req.params?.id);
       const { analysis } = req.body;
       const userId = req.user?.id;
 
