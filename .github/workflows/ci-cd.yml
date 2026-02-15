@@ -67,7 +67,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ./backend/package-lock.json
+          # Si el lockfile no existe, no fallar el cache
+          cache-dependency-path: |
+            ./backend/package-lock.json
+            ./backend/package.json
 
       - name: ℹ️ Env diagnostics (backend)
         run: |
