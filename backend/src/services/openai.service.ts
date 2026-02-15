@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 import OpenAI from 'openai';
 import { config } from '../config';
 import { configService } from './config.service';

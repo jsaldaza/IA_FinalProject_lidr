@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
@@ -118,21 +118,7 @@ const ConversationalChatPage: React.FC = () => {
     const aiMsgBg = useColorModeValue('gray.100', 'gray.700');
     const chatBg = useColorModeValue('gray.50', 'gray.900');
 
-    useEffect(() => {
-        if (id) {
-            loadAnalysis();
-        }
-    }, [id]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [analysis?.messages]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const loadAnalysis = async () => {
+    const loadAnalysis = useCallback(async () => {
         if (!id) return;
         
         try {
@@ -157,6 +143,20 @@ const ConversationalChatPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    }, [id, navigate, toast]);
+
+    useEffect(() => {
+        if (id) {
+            void loadAnalysis();
+        }
+    }, [id, loadAnalysis]);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [analysis?.messages]);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     const handleSendMessage = async () => {

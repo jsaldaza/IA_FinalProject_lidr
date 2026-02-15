@@ -58,17 +58,17 @@ function loadConfig(): Config {
             nodeEnv: validatedConfig.nodeEnv,
             port: validatedConfig.port,
             // Do not log database URL or secrets
-        } as any);
+        });
         return validatedConfig;
     } catch (error) {
         if (error instanceof z.ZodError) {
             StructuredLogger.error('Configuration validation failed', error, {
                 // Attach field paths and messages in a redacted-friendly way
-                validationErrors: error.errors.map(err => ({ path: err.path.join('.'), message: err.message })) as any
-            } as any);
+                validationErrors: error.errors.map(err => ({ path: err.path.join('.'), message: err.message }))
+            });
             StructuredLogger.info('Please check your .env file and ensure all required variables are set correctly', {
                 required: ['DATABASE_URL', 'JWT_SECRET', 'OPENAI_API_KEY']
-            } as any);
+            });
             process.exit(1);
         }
         throw error;

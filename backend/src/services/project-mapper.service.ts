@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ProjectData } from './project.service';
 import { ConversationalAnalysisEntity } from '../types/conversational.types';
 

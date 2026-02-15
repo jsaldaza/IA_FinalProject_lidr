@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { PrismaClient } from '@prisma/client';
 import { 
   ConversationalAnalysisEntity, 
   ConversationalPhase, 
@@ -8,8 +7,8 @@ import {
   MessageType,
   QuestionCategory
 } from '../../types/conversational.types';
-
-const prisma = new PrismaClient();
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { prisma } from '../../lib/prisma';
 
 // Importar el enum de forma dinámica desde el cliente
 const { QuestionCategory: PrismaQuestionCategory } = require('@prisma/client');

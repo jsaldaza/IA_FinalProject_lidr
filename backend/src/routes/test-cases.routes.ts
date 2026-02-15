@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import express, { Request } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth.middleware';

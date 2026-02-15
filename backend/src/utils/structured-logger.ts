@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createLogger, format, transports } from 'winston';
 
 // Avoid importing config here to prevent a circular dependency with config.ts
@@ -135,7 +136,7 @@ export class StructuredLogger {
                     } else {
                         out[key] = val;
                     }
-                } catch (e) {
+                } catch {
                     out[key] = '[UNSERIALIZABLE]';
                 }
             }

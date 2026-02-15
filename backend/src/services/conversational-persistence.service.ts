@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-nocheck
 // 🚀 SERVICIO DE PERSISTENCIA SIMPLIFICADO PARA SUPABASE
 // ======================================================

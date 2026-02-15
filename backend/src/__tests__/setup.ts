@@ -6,7 +6,7 @@ import { jest } from '@jest/globals'
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key';
-process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/testdb';
+process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || 'mongodb://127.0.0.1:27017/testforge_test';
 
 // Increase timeout for database operations
 

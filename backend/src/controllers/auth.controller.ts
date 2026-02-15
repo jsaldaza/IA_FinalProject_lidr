@@ -6,6 +6,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
 import { StructuredLogger } from '../utils/structured-logger';
+import { ResponseHandler } from '../utils/response-handler';
+import { ValidationError, UnauthorizedError, ConflictError, InternalServerError, NotFoundError, AppError } from '../utils/error-handler';
 
 // Validation schemas
 const registerSchema = z.object({
@@ -19,13 +21,6 @@ const loginSchema = z.object({
     password: z.string().min(1, 'Password is required'),
 });
 
-class AuthError extends Error {
-    constructor(public statusCode: number, message: string) {
-        super(message);
-        this.name = 'AuthError';
-    }
-}
-
 export class AuthController {
     private static generateToken(payload: { id: string; email: string }): string {
         // Generate JWT token (do not log payload or token)
@@ -34,8 +29,11 @@ export class AuthController {
 
     static async register(req: Request, res: Response): Promise<void> {
         try {
-            // Validate input
-            const { email, password, name } = registerSchema.parse(req.body);
+            const parsed = registerSchema.safeParse(req.body);
+            if (!parsed.success) {
+                throw new ValidationError('Invalid input', parsed.error.errors);
+            }
+            const { email, password, name } = parsed.data;
 
             // Check if user already exists (optimized)
             const existingUser = await prisma.user.findUnique({
@@ -44,7 +42,7 @@ export class AuthController {
             });
 
             if (existingUser) {
-                throw new AuthError(400, 'User already exists');
+                throw new ConflictError('User already exists');
             }
 
             // Hash password
@@ -79,43 +77,21 @@ export class AuthController {
                 maxAge: 24 * 60 * 60 * 1000 // 24 hours
             });
 
-            res.status(201).json({
-                status: 'success',
-                data: {
-                    user,
-                    token
-                }
-            });
+            ResponseHandler.created(res, { user, token });
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                res.status(400).json({
-                    status: 'error',
-                    errors: error.errors.map(e => ({
-                        field: e.path.join('.'),
-                        message: e.message
-                    }))
-                });
-                return;
-            }
-            if (error instanceof AuthError) {
-                res.status(error.statusCode).json({
-                    status: 'error',
-                    message: error.message
-                });
-                return;
-            }
-            console.error('Registration error:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Internal server error'
-            });
+            const appError = error instanceof AppError ? error : new InternalServerError('Internal server error');
+            StructuredLogger.error('Registration error', error as Error, { email: req.body?.email });
+            ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
         }
     }
 
     static async login(req: Request, res: Response): Promise<void> {
         try {
-            // Validate input
-            const { email, password } = loginSchema.parse(req.body);
+            const parsed = loginSchema.safeParse(req.body);
+            if (!parsed.success) {
+                throw new ValidationError('Invalid input', parsed.error.errors);
+            }
+            const { email, password } = parsed.data;
 
             // Find user (optimized - only select needed fields)
             const user = await prisma.user.findUnique({ 
@@ -130,44 +106,24 @@ export class AuthController {
                 }
             });
 
-            if (!user) throw new AuthError(401, 'Invalid credentials');
+            if (!user) throw new UnauthorizedError('Invalid credentials');
 
             // Verify password
             const isPasswordValid = await bcrypt.compare(password, user.password);
-            if (!isPasswordValid) throw new AuthError(401, 'Invalid credentials');
+            if (!isPasswordValid) throw new UnauthorizedError('Invalid credentials');
 
             // Generate JWT token
             const token = AuthController.generateToken({ id: user.id, email: user.email });
 
             // Return user data without password
-            const { password: _, ...userWithoutPassword } = user;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { password: _password, ...userWithoutPassword } = user;
 
-            res.json({ status: 'success', data: { user: userWithoutPassword, token } });
+            ResponseHandler.success(res, { user: userWithoutPassword, token });
         } catch (error) {
-            console.error('LOGIN ERROR:', error);
-            
-            if (error instanceof z.ZodError) {
-                res.status(400).json({
-                    status: 'error',
-                    errors: error.errors.map(e => ({
-                        field: e.path.join('.'),
-                        message: e.message
-                    }))
-                });
-                return;
-            }
-            if (error instanceof AuthError) {
-                res.status(error.statusCode).json({
-                    status: 'error',
-                    message: error.message
-                });
-                return;
-            }
-            console.error('Login error:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Internal server error'
-            });
+            const appError = error instanceof AppError ? error : new InternalServerError('Internal server error');
+            StructuredLogger.error('LOGIN ERROR', error as Error, { email: req.body?.email });
+            ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
         }
     }
 
@@ -176,7 +132,7 @@ export class AuthController {
             const userId = req.user?.id;
 
             if (!userId) {
-                throw new AuthError(401, 'Not authenticated');
+                throw new UnauthorizedError('Not authenticated');
             }
 
             const user = await prisma.user.findUnique({
@@ -197,26 +153,14 @@ export class AuthController {
             });
 
             if (!user) {
-                throw new AuthError(404, 'User not found');
+                throw new NotFoundError('User');
             }
 
-            res.json({
-                status: 'success',
-                data: user
-            });
+            ResponseHandler.success(res, user);
         } catch (error) {
-            if (error instanceof AuthError) {
-                res.status(error.statusCode).json({
-                    status: 'error',
-                    message: error.message
-                });
-                return;
-            }
-            console.error('Get profile error:', error);
-            res.status(500).json({
-                status: 'error',
-                message: 'Internal server error'
-            });
+            const appError = error instanceof AppError ? error : new InternalServerError('Internal server error');
+            StructuredLogger.error('Get profile error', error as Error, { userId: req.user?.id });
+            ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
         }
     }
 
@@ -243,10 +187,7 @@ export class AuthController {
                 sameSite: 'strict'
             });
             
-            res.json({
-                status: 'success',
-                message: 'Logged out successfully'
-            });
+            ResponseHandler.success(res, { message: 'Logged out successfully' });
         } catch (error) {
             StructuredLogger.error('Logout error', error as Error, {
                 userId: req.user?.id
@@ -254,10 +195,7 @@ export class AuthController {
             
             // Aunque haya error, limpiar cookie local
             res.clearCookie('token');
-            res.json({
-                status: 'success',
-                message: 'Logged out successfully'
-            });
+            ResponseHandler.success(res, { message: 'Logged out successfully' });
         }
     }
 }

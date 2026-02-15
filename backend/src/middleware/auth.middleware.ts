@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { prisma } from '../lib/prisma';
-import { UnauthorizedError } from '../utils/errors';
 import { StructuredLogger } from '../utils/structured-logger';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
+import { AppError, UnauthorizedError, InternalServerError } from '../utils/error-handler';
 
 export interface AuthRequest extends Request {
     user?: {
@@ -48,7 +48,7 @@ export const authenticate = async (
                 url: req.originalUrl
             });
             
-            return sendUnauthorizedResponse(res, 'Authentication required. Please log in.');
+            throw new UnauthorizedError('Authentication required. Please log in.');
         }
 
         // Handle demo token in development (RESTRICTED)
@@ -81,7 +81,7 @@ export const authenticate = async (
                 ip: req.ip
             });
             
-            return sendUnauthorizedResponse(res, 'Token has been invalidated. Please log in again.');
+            throw new UnauthorizedError('Token has been invalidated. Please log in again.');
         }
         
         // Verify user exists in database (security check)
@@ -96,7 +96,7 @@ export const authenticate = async (
                 ip: req.ip
             });
             
-            return sendUnauthorizedResponse(res, 'User account no longer exists.');
+            throw new UnauthorizedError('User account no longer exists.');
         }
 
         // Attach authenticated user to request
@@ -113,7 +113,7 @@ export const authenticate = async (
 
         next();
     } catch (error) {
-        handleAuthenticationError(error, req, res);
+        handleAuthenticationError(error, req, res, next);
     }
 };
 
@@ -172,35 +172,23 @@ async function verifyUserExists(userId: string): Promise<{ id: string; email: st
         StructuredLogger.error('Database error during user verification', error as Error, {
             userId
         });
-        throw new Error('Database connection error');
+        throw new InternalServerError('Database connection error');
     }
-}
-
-/**
- * Envía respuesta de no autorizado de forma consistente
- */
-function sendUnauthorizedResponse(res: Response, message: string): void {
-    res.status(401).json({
-        status: 'error',
-        message,
-        code: 'UNAUTHORIZED'
-    });
 }
 
 /**
  * Maneja errores de autenticación de forma centralizada
  */
-function handleAuthenticationError(error: unknown, req: Request, res: Response): void {
+function handleAuthenticationError(error: unknown, req: Request, res: Response, next: NextFunction): void {
     StructuredLogger.error('Authentication error', error as Error, {
         method: req.method,
         url: req.originalUrl,
         ip: req.ip
     });
 
-    if (error instanceof UnauthorizedError) {
-        return sendUnauthorizedResponse(res, error.message);
-    }
+    const appError = error instanceof AppError
+        ? error
+        : new InternalServerError('Authentication failed');
 
-    // For unexpected errors, don't leak details
-    return sendUnauthorizedResponse(res, 'Authentication failed');
+    next(appError);
 }

@@ -46,17 +46,6 @@ Thumbs.db
 *.tgz
 *.tar.gz
 
-# Frontend specific
-/testforge-frontend/.env
-/testforge-frontend/dist/
-/testforge-frontend/node_modules/
-
-# Backend specific
-/testforge-backend/.env
-/testforge-backend/dist/
-/testforge-backend/node_modules/
-/testforge-backend/logs/
-
 # Database
 *.db
 *.sqlite
@@ -74,9 +63,6 @@ junit.xml
 *.postman_collection.json
 *.postman_environment.json
 thunder-tests/
-
-# Migration logs
-/testforge-backend/migrations/*.log
 
 # Temporary files
 tmp/

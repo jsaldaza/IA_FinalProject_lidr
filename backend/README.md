@@ -3,8 +3,8 @@
 Este es el backend de la plataforma TestForge, desarrollado en Node.js y TypeScript usando Express.
 
 ## Requisitos
-- Node.js v18+
-- PostgreSQL
+- Node.js v20+
+- MongoDB Atlas o Mongo local (cadena `mongodb://` o `mongodb+srv://`)
 - Redis (opcional)
 - OpenAI API Key (para funciones de IA)
 

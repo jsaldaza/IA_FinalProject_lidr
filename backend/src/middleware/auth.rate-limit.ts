@@ -1,9 +1,11 @@
 import rateLimit from 'express-rate-limit';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
+ 
 import { Request, Response, NextFunction } from 'express';
 import { StructuredLogger } from '../utils/structured-logger';
 
-/**
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/*
  * Rate Limiting agresivo específico para endpoints de autenticación
  * Para prevenir ataques de fuerza bruta
  */

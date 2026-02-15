@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../src/lib/prisma';
 
 (async () => {
-  const prisma = new PrismaClient();
   try {
     const id = process.argv[2];
     if (!id) {

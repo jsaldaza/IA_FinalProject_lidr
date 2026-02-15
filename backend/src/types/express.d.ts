@@ -1,5 +1,4 @@
-import { Request } from 'express';
-import { JwtPayload } from 'jsonwebtoken';
+import type { JwtPayload } from 'jsonwebtoken';
 
 declare global {
     namespace Express {
@@ -8,7 +7,7 @@ declare global {
                 id: string;
                 email: string;
                 role?: string;
-                [key: string]: any;
+                [key: string]: unknown;
             } & JwtPayload;
             pagination?: {
                 page: number;

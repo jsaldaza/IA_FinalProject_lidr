@@ -1,17 +1,17 @@
-// @ts-nocheck
-import { Response } from 'express';
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+import { Request, Response } from 'express';
+import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth.middleware';
-// import { projectService } from '../services/project.service'; // Unused for now
 import { conversationalService } from '../services/conversational.service';
 import { projectValidationService } from '../services/project-validation.service';
 import { ProjectMapper } from '../services/project-mapper.service';
+import { projectService, UpdateProjectData } from '../services/project.service';
 import { conversationalWorkflowService } from '../services/conversational/workflow.service';
 import { conversationalDatabaseService } from '../services/conversational/database.service';
 import { ConversationalStatus } from '../types/conversational.types';
-import { PrismaClient } from '@prisma/client';
-import { z } from 'zod';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
+import { ResponseHandler } from '../utils/response-handler';
+import { AppError, ForbiddenError, UnauthorizedError, ValidationError, InternalServerError, NotFoundError } from '../utils/error-handler';
 
 const sendMessageSchema = z.union([
   z.object({
@@ -36,16 +36,14 @@ export class ProjectsController {
       const userId = req.user?.id;
       const userValidation = projectValidationService.validateUserId(userId);
       if (!userValidation.success) {
-        return res.status(401).json(ProjectMapper.createErrorResponse(userValidation.error!));
+        throw new UnauthorizedError(userValidation.error || 'Usuario no autenticado');
       }
 
       const validUserId = userId as string;
       const { title } = req.body;
 
       if (!title || title.trim().length < 3) {
-        return res.status(400).json(ProjectMapper.createErrorResponse(
-          'Project title is required and must be at least 3 characters'
-        ));
+        throw new ValidationError('Project title is required and must be at least 3 characters');
       }
 
       // Check project limit
@@ -56,10 +54,10 @@ export class ProjectsController {
       ).length;
 
       if (inProgressCount >= 50) {
-        return res.status(400).json(ProjectMapper.createErrorResponse(
+        throw new ValidationError(
           'Project limit reached',
-          `You have reached the limit of 50 projects in progress. Current count: ${inProgressCount}`
-        ));
+          { currentCount: inProgressCount, limit: 50 }
+        );
       }
 
       // Create basic conversation with minimal description
@@ -72,18 +70,16 @@ export class ProjectsController {
       });
 
       if (!analysis || !analysis.id) {
-        return res.status(500).json(ProjectMapper.createErrorResponse('Error creating conversational analysis'));
+        throw new InternalServerError('Error creating conversational analysis');
       }
 
       const projectData = ProjectMapper.fromConversationalEntity(analysis);
-      return res.status(201).json(ProjectMapper.createFrontendCreateResponse(projectData));
+      return ResponseHandler.created(res, ProjectMapper.createFrontendCreateResponse(projectData));
 
     } catch (error) {
       console.error('❌ QUICK CREATE ERROR:', error);
-      return res.status(500).json(ProjectMapper.createErrorResponse(
-        'Internal server error',
-        error instanceof Error ? error.message : String(error)
-      ));
+      const appError = error instanceof AppError ? error : new InternalServerError('Internal server error');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -96,7 +92,7 @@ export class ProjectsController {
       const userId = req.user?.id;
       const userValidation = projectValidationService.validateUserId(userId);
       if (!userValidation.success) {
-        return res.status(401).json(ProjectMapper.createErrorResponse(userValidation.error!));
+        return ResponseHandler.error(res, userValidation.error || 'Usuario no autenticado', 401, 'AUTH_REQUIRED');
       }
 
       // At this point userId is validated to be a string
@@ -108,28 +104,14 @@ export class ProjectsController {
       const projectDescription = bodyData.description;
 
       if (!projectTitle || !projectDescription) {
-        return res.status(400).json(ProjectMapper.createErrorResponse(
-          'Project title and description are required',
-          'Both title and description are required'
-        ));
+        throw new ValidationError('Project title and description are required');
       }
 
       // Validar longitud
-      if (projectTitle.length < 3) {
-        return res.status(400).json(ProjectMapper.createErrorResponse('Title must be at least 3 characters'));
-      }
-
-      if (projectTitle.length > 200) {
-        return res.status(400).json(ProjectMapper.createErrorResponse('Title cannot exceed 200 characters'));
-      }
-
-      if (projectDescription.length < 20) {
-        return res.status(400).json(ProjectMapper.createErrorResponse('Description must be at least 20 characters'));
-      }
-
-      if (projectDescription.length > 5000) {
-        return res.status(400).json(ProjectMapper.createErrorResponse('Description cannot exceed 5000 characters'));
-      }
+      if (projectTitle.length < 3) throw new ValidationError('Title must be at least 3 characters');
+      if (projectTitle.length > 200) throw new ValidationError('Title cannot exceed 200 characters');
+      if (projectDescription.length < 20) throw new ValidationError('Description must be at least 20 characters');
+      if (projectDescription.length > 5000) throw new ValidationError('Description cannot exceed 5000 characters');
 
       // Check project limit
       const userProjectsInProgress = await conversationalWorkflowService.getUserWorkflows(validUserId);
@@ -139,10 +121,7 @@ export class ProjectsController {
       ).length;
 
       if (inProgressCount >= 50) {
-        return res.status(400).json(ProjectMapper.createErrorResponse(
-          'Project limit reached',
-          `You have reached the limit of 50 projects in progress. Current count: ${inProgressCount}`
-        ));
+        throw new ValidationError('Project limit reached', { currentCount: inProgressCount, limit: 50 });
       }
 
       // Create conversation
@@ -153,18 +132,16 @@ export class ProjectsController {
       });
 
       if (!analysis || !analysis.id) {
-        return res.status(500).json(ProjectMapper.createErrorResponse('Error creating conversational analysis'));
+        throw new InternalServerError('Error creating conversational analysis');
       }
 
       const projectData = ProjectMapper.fromConversationalEntity(analysis);
-      return res.status(201).json(ProjectMapper.createFrontendCreateResponse(projectData));
+      return ResponseHandler.created(res, ProjectMapper.createFrontendCreateResponse(projectData));
 
     } catch (error) {
       console.error('❌ CREATE AND START:', error);
-      return res.status(500).json(ProjectMapper.createErrorResponse(
-        'Internal server error',
-        error instanceof Error ? error.message : String(error)
-      ));
+      const appError = error instanceof AppError ? error : new InternalServerError('Internal server error');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -178,10 +155,7 @@ export class ProjectsController {
       
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: 'Usuario no autenticado'
-        });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       const bodyData = req.body;
@@ -189,17 +163,11 @@ export class ProjectsController {
       const projectDescription = bodyData.description;
 
       if (!projectTitle) {
-        return res.status(400).json({
-          success: false,
-          error: 'Project title is required'
-        });
+        throw new ValidationError('Project title is required');
       }
 
       if (!projectDescription) {
-        return res.status(400).json({
-          success: false,
-          error: 'Project description is required'
-        });
+        throw new ValidationError('Project description is required');
       }
 
       // Crear análisis conversacional (tabla principal)
@@ -210,27 +178,21 @@ export class ProjectsController {
         projectDescription // epicContent = description por ahora
       );
 
-      return res.status(201).json({
-        status: 'success',
-        data: {
-          project: {
-            id: analysis.id,
-            title: projectTitle,
-            description: projectDescription,
-            userId: userId,
-            createdAt: analysis.createdAt,
-            updatedAt: analysis.updatedAt
-          }
+      return ResponseHandler.created(res, {
+        project: {
+          id: analysis.id,
+          title: projectTitle,
+          description: projectDescription,
+          userId: userId,
+          createdAt: analysis.createdAt,
+          updatedAt: analysis.updatedAt
         }
       });
 
     } catch (error) {
       console.error('❌ CREATE PROJECT: Error:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Internal server error');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -241,28 +203,31 @@ export class ProjectsController {
   async createDraft(req: AuthRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
-
-      const bodyData = req.body;
-      const projectTitle = bodyData.title || bodyData.name;
-
-      if (!projectTitle || projectTitle.length < 3) {
-        return res.status(400).json({ success: false, error: 'El título debe tener al menos 3 caracteres' });
+      if (!userId) {
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
-      // Crear análisis conversacional como borrador con description vacío
-      const analysis = await conversationalDatabaseService.createAnalysis({
-        title: projectTitle,
-        description: '',
-        epicContent: '',
-        userId
-      });
+      const bodyData = req.body;
+      const projectTitle = (bodyData.title || bodyData.name || '').trim();
 
-      return res.status(201).json({ status: 'success', data: { project: { id: analysis.id, title: analysis.title, createdAt: analysis.createdAt } } });
+      if (!projectTitle || projectTitle.length < 3) {
+        throw new ValidationError('El título debe tener al menos 3 caracteres');
+      }
+
+      const project = await projectService.createProject(userId, { title: projectTitle });
+
+      return ResponseHandler.created(res, {
+        project: {
+          id: project.id,
+          title: project.title,
+          createdAt: project.createdAt
+        }
+      });
 
     } catch (error) {
       console.error('❌ CREATE DRAFT: Error:', error);
-      return res.status(500).json({ success: false, error: 'Error interno al crear borrador', details: error instanceof Error ? error.message : String(error) });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno al crear borrador');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -273,31 +238,35 @@ export class ProjectsController {
   async updateProject(req: AuthRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
+      if (!userId) {
+        throw new UnauthorizedError('Usuario no autenticado');
+      }
 
       const { id } = req.params;
-      const updates = req.body;
+      const updates = req.body || {};
 
-      // Permitir actualizar title, description, epicContent
-      const allowed: any = {};
-      if (updates.title) allowed.title = updates.title;
+      const allowed: UpdateProjectData = {};
+      if (typeof updates.title === 'string') allowed.title = updates.title;
       if (updates.description !== undefined) allowed.description = updates.description;
       if (updates.epicContent !== undefined) allowed.epicContent = updates.epicContent;
 
-      // Usar servicio de persistencia para update (usa conversationalDatabaseService.updateAnalysis)
-  // Try to update via Prisma directly for flexible fields
-  const prisma = new PrismaClient();
-  const prismaUpdateData: any = {};
-  if (allowed.title) prismaUpdateData.title = allowed.title;
-  if (allowed.description !== undefined) prismaUpdateData.description = allowed.description;
-  if (allowed.epicContent !== undefined) prismaUpdateData.epicContent = allowed.epicContent;
+      if (Object.keys(allowed).length === 0) {
+        throw new ValidationError('No hay campos para actualizar');
+      }
 
-  const result = await prisma.conversationalAnalysis.update({ where: { id }, data: prismaUpdateData });
-  return res.status(200).json({ success: true, data: { id: result.id, title: result.title, description: result.description, epicContent: result.epicContent } });
+      const result = await projectService.updateProject(id, userId, allowed);
+
+      return ResponseHandler.success(res, {
+        id: result.id,
+        title: result.title,
+        description: result.description,
+        epicContent: result.epicContent
+      });
 
     } catch (error) {
       console.error('❌ UPDATE PROJECT ERROR:', error);
-      return res.status(500).json({ success: false, error: 'Error al actualizar proyecto', details: error instanceof Error ? error.message : String(error) });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al actualizar proyecto');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -308,15 +277,15 @@ export class ProjectsController {
   async startExistingProject(req: AuthRequest, res: Response): Promise<Response> {
     try {
       const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
+      if (!userId) throw new UnauthorizedError('Usuario no autenticado');
 
       const { id } = req.params;
 
       // Obtener análisis actual
   const existing = await conversationalDatabaseService.getAnalysisById(id);
-      if (!existing) return res.status(404).json({ success: false, error: 'Análisis no encontrado' });
+  if (!existing) throw new NotFoundError('Análisis');
 
-      if (existing.userId !== userId) return res.status(403).json({ success: false, error: 'No autorizado' });
+  if (existing.userId !== userId) throw new ForbiddenError('No autorizado');
 
       // Llamar a una variante de startConversation que opere sobre un analysis existente.
       // Implementación: si description/epicContent están vacíos usar body, sino usar existentes.
@@ -326,7 +295,6 @@ export class ProjectsController {
       const epicContent = body.epicContent !== undefined ? body.epicContent : existing.epicContent || description;
 
       // Actualizar la entidad con la info si se proporcionó
-      const prisma = new PrismaClient();
       await prisma.conversationalAnalysis.update({ where: { id }, data: { title, description, epicContent } });
 
       // Ahora ejecutar la generación inicial de IA similar a startConversation but for existing id
@@ -336,21 +304,22 @@ export class ProjectsController {
         // result may be { analysis, alreadyStarted }
         if ((result as any).analysis) {
           const { analysis, alreadyStarted } = result as any;
-          return res.status(200).json({ success: true, data: { project: analysis, alreadyStarted: !!alreadyStarted } });
+          return ResponseHandler.success(res, { project: analysis, alreadyStarted: !!alreadyStarted });
         }
         // fallback to old behaviour if service returned plain entity
-        return res.status(200).json({ success: true, data: { project: result } });
+        return ResponseHandler.success(res, { project: result });
       }
 
       // Fallback simple: call process to generate a welcome message using OpenAI prompt flow
       // For now, reuse startConversation by creating a minor wrapper: call startConversation with same params
       const analysisCreated = await conversationalWorkflowService.startConversation(userId, title, description, epicContent);
 
-      return res.status(200).json({ success: true, data: { project: analysisCreated } });
+      return ResponseHandler.success(res, { project: analysisCreated });
 
     } catch (error) {
       console.error('❌ START EXISTING PROJECT ERROR:', error);
-      return res.status(500).json({ success: false, error: 'Error al iniciar IA en proyecto existente', details: error instanceof Error ? error.message : String(error) });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al iniciar IA en proyecto existente');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -364,7 +333,7 @@ export class ProjectsController {
       
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       // Usar ConversationalAnalysis como tabla principal de proyectos
@@ -392,26 +361,21 @@ export class ProjectsController {
         take: 20 // Limite para mejor performance
       });
 
-      return res.status(200).json({
-        status: 'success',
-        data: projectsInProgress.map(project => ({
-          id: project.id,
-          title: project.title,
-          description: project.description,
-          status: project.status,
-          phase: project.currentPhase,
-          progress: project.completeness,
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt
-        }))
-      });
+      return ResponseHandler.success(res, projectsInProgress.map(project => ({
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        status: project.status,
+        phase: project.currentPhase,
+        progress: project.completeness,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt
+      })));
 
     } catch (error) {
   console.error('GET PROJECTS ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al obtener proyectos en progreso',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener proyectos en progreso');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -425,7 +389,7 @@ export class ProjectsController {
       
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       const completedProjects = await prisma.conversationalAnalysis.findMany({
@@ -450,31 +414,25 @@ export class ProjectsController {
         take: 20
       });
 
-      return res.status(200).json({
-        success: true,
-        data: {
-          items: completedProjects.map(project => ({
-            id: project.id,
-            name: project.title, // Mapear title a name para compatibilidad con frontend
-            title: project.title,
-            description: project.description,
-            // Include requirement (epicContent or description) so frontend can show it for completed projects
-            requirement: project.epicContent || project.description || '',
-            status: project.status,
-            phase: project.currentPhase,
-            progress: project.completeness,
-            createdAt: project.createdAt,
-            updatedAt: project.updatedAt
-          }))
-        }
+      return ResponseHandler.success(res, {
+        items: completedProjects.map(project => ({
+          id: project.id,
+          name: project.title, // Mapear title a name para compatibilidad con frontend
+          title: project.title,
+          description: project.description,
+          requirement: project.epicContent || project.description || '',
+          status: project.status,
+          phase: project.currentPhase,
+          progress: project.completeness,
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt
+        }))
       });
 
     } catch (error) {
   console.error('GET COMPLETED ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al obtener proyectos completados',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener proyectos completados');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -487,7 +445,7 @@ export class ProjectsController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       // Fetch in-progress projects
@@ -526,36 +484,34 @@ export class ProjectsController {
         take: 50
       });
 
-      return res.status(200).json({
-        success: true,
-        data: {
-          inProgress: inProgress.map(p => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            status: p.status,
-            phase: p.currentPhase,
-            progress: p.completeness,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt
-          })),
-          completed: completed.map(p => ({
-            id: p.id,
-            name: p.title,
-            title: p.title,
-            description: p.description,
-            requirement: p.epicContent || p.description || '',
-            status: p.status,
-            phase: p.currentPhase,
-            progress: p.completeness,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt
-          }))
-        }
+      return ResponseHandler.success(res, {
+        inProgress: inProgress.map(p => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          status: p.status,
+          phase: p.currentPhase,
+          progress: p.completeness,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt
+        })),
+        completed: completed.map(p => ({
+          id: p.id,
+          name: p.title,
+          title: p.title,
+          description: p.description,
+          requirement: p.epicContent || p.description || '',
+          status: p.status,
+          phase: p.currentPhase,
+          progress: p.completeness,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt
+        }))
       });
     } catch (error) {
       console.error('GET ALL PROJECTS ERROR:', error);
-      return res.status(500).json({ error: 'Error al obtener proyectos', details: error instanceof Error ? error.message : String(error) });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener proyectos');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -569,62 +525,39 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
-      const project = await prisma.conversationalAnalysis.findFirst({
-        where: {
-          id: id,
-          userId: userId
-        },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          currentPhase: true,
-          status: true,
-          completeness: true,
-          epicContent: true, // Incluir el análisis para proyectos completados
-          createdAt: true,
-          updatedAt: true
-        }
-      });
+      const project = await projectService.getProjectById(id, userId);
 
       if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
+        throw new NotFoundError('Project');
       }
 
-      // Debug: log message counts to help diagnose duplicate display issues
       try {
         const msgs = (project as any).messages || [];
         console.log(`ℹ️ GET /api/projects/${project.id}/status - messages returned: ${Array.isArray(msgs) ? msgs.length : 'unknown'}`);
       } catch (e) {
-        // ignore
+        // ignore debug logging failures
       }
 
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          id: project.id,
-          title: project.title,
-          description: project.description,
-          status: project.status,
-          phase: project.currentPhase,
-          progress: project.completeness,
-          analysis: project.epicContent || '', // Incluir el análisis final
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
-          // Include messages only if present (frontend reads via conversationalWorkflowService when needed)
-          messages: (project as any).messages || []
-        }
+      return ResponseHandler.success(res, {
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        status: project.status,
+        phase: project.currentPhase,
+        progress: project.completeness,
+        analysis: project.epicContent || '',
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+        messages: (project as any).messages || []
       });
 
     } catch (error) {
-  console.error('GET PROJECT STATUS ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al obtener status del proyecto',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      console.error('GET PROJECT STATUS ERROR:', error);
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener status del proyecto');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -638,52 +571,39 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
-      // Verificar que el proyecto existe y pertenece al usuario
-      const project = await prisma.conversationalAnalysis.findFirst({
-        where: {
-          id: id,
-          userId: userId
-        }
-      });
+      const project = await projectService.getProjectById(id, userId);
 
       if (!project) {
-        return res.status(404).json({ error: 'Proyecto no encontrado' });
+        throw new NotFoundError('Proyecto');
       }
 
-      // Obtener análisis con mensajes usando el servicio conversacional
       const analysis = await conversationalWorkflowService.getAnalysisById(id);
       
       if (!analysis) {
-        return res.status(404).json({ error: 'Análisis no encontrado' });
+        throw new NotFoundError('Análisis');
       }
       
-      // Obtener mensajes desde la base de datos
       const messages = await conversationalDatabaseService.getMessagesForAnalysis(id);
       
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          messages: messages || [],
-          projectInfo: {
-            id: analysis.id,
-            title: analysis.title,
-            status: analysis.status,
-            completeness: analysis.completeness,
-            currentPhase: analysis.currentPhase,
-            description: analysis.description
-          }
+      return ResponseHandler.success(res, {
+        messages: messages || [],
+        projectInfo: {
+          id: analysis.id,
+          title: analysis.title,
+          status: analysis.status,
+          completeness: analysis.completeness,
+          currentPhase: analysis.currentPhase,
+          description: analysis.description
         }
       });
 
     } catch (error) {
       console.error('GET MESSAGES ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al obtener mensajes',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener mensajes');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -697,48 +617,42 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       const validationResult = sendMessageSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({
-          error: 'Datos de entrada inválidos',
-          details: validationResult.error.errors
-        });
+        throw new ValidationError('Datos de entrada inválidos', validationResult.error.errors);
       }
 
-      // Normalizar payload: soportar legacy { content } y nuevo { instruction, requirement }
+      const project = await projectService.getProjectById(id, userId);
+      if (!project) {
+        throw new NotFoundError('Proyecto');
+      }
+
       let content: string;
       const parsed = validationResult.data as any;
       if (parsed.content) {
         content = parsed.content;
       } else {
-        // Build a concatenated content so existing processing logic continues to work
         content = parsed.instruction;
         if (parsed.requirement) {
           content += `\n\n---\nRequerimiento editado:\n${parsed.requirement}`;
         }
       }
 
-      // Procesar mensaje con el servicio conversacional
       const response = await conversationalWorkflowService.processUserMessage(id, content);
 
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          message: response,
-          timestamp: new Date().toISOString(),
-          projectId: id
-        }
+      return ResponseHandler.success(res, {
+        message: response,
+        timestamp: new Date().toISOString(),
+        projectId: id
       });
 
     } catch (error) {
-  console.error('SEND MESSAGE ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al procesar mensaje',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      console.error('SEND MESSAGE ERROR:', error);
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al procesar mensaje');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -752,39 +666,17 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
-      // Verificar que el proyecto existe y pertenece al usuario
-      const project = await prisma.conversationalAnalysis.findFirst({
-        where: {
-          id: id,
-          userId: userId
-        }
-      });
+      await projectService.deleteProject(id, userId);
 
-      if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
-      }
-
-      // Eliminar el proyecto
-      await prisma.conversationalAnalysis.delete({
-        where: {
-          id: id
-        }
-      });
-
-      return res.status(200).json({
-        status: 'success',
-        message: 'Proyecto eliminado exitosamente'
-      });
+      return ResponseHandler.success(res, { message: 'Proyecto eliminado exitosamente' });
 
     } catch (error) {
-  console.error('DELETE PROJECT ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al eliminar proyecto',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      console.error('DELETE PROJECT ERROR:', error);
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al eliminar proyecto');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -798,10 +690,9 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
-      // Obtener el proyecto y sus mensajes
       const project = await prisma.conversationalAnalysis.findFirst({
         where: {
           id: id,
@@ -821,7 +712,7 @@ export class ProjectsController {
       });
 
       if (!project) {
-        return res.status(404).json({ error: 'Proyecto no encontrado' });
+        throw new NotFoundError('Proyecto');
       }
 
       // Buscar el levantamiento final usando marcadores o fallback al último mensaje
@@ -900,23 +791,18 @@ export class ProjectsController {
         return updated;
       });
 
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          id: updatedProject.id,
-          title: updatedProject.title,
-          status: updatedProject.status,
-          completeness: updatedProject.completeness,
-          finalAnalysis: finalAnalysis
-        }
+      return ResponseHandler.success(res, {
+        id: updatedProject.id,
+        title: updatedProject.title,
+        status: updatedProject.status,
+        completeness: updatedProject.completeness,
+        finalAnalysis: finalAnalysis
       });
 
     } catch (error) {
       console.error('COMPLETE PROJECT ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al completar proyecto',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al completar proyecto');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -931,14 +817,13 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       if (!analysis || typeof analysis !== 'string') {
-        return res.status(400).json({ error: 'El análisis es requerido' });
+        throw new ValidationError('El análisis es requerido');
       }
 
-      // Verificar que el proyecto existe y pertenece al usuario
       const project = await prisma.conversationalAnalysis.findFirst({
         where: {
           id: id,
@@ -947,10 +832,9 @@ export class ProjectsController {
       });
 
       if (!project) {
-        return res.status(404).json({ error: 'Proyecto no encontrado' });
+        throw new NotFoundError('Proyecto');
       }
 
-      // Actualizar el análisis
       const updatedProject = await prisma.conversationalAnalysis.update({
         where: {
           id: id,
@@ -962,21 +846,16 @@ export class ProjectsController {
         }
       });
 
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          id: updatedProject.id,
-          title: updatedProject.title,
-          analysis: updatedProject.epicContent
-        }
+      return ResponseHandler.success(res, {
+        id: updatedProject.id,
+        title: updatedProject.title,
+        analysis: updatedProject.epicContent
       });
 
     } catch (error) {
       console.error('UPDATE ANALYSIS ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al actualizar análisis',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al actualizar análisis');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -991,14 +870,13 @@ export class ProjectsController {
       const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: 'Usuario no autenticado' });
+        throw new UnauthorizedError('Usuario no autenticado');
       }
 
       if (!analysis || typeof analysis !== 'string') {
-        return res.status(400).json({ error: 'El análisis es requerido' });
+        throw new ValidationError('El análisis es requerido');
       }
 
-      // Verificar que el proyecto existe
       const project = await prisma.conversationalAnalysis.findFirst({
         where: {
           id: id,
@@ -1007,7 +885,7 @@ export class ProjectsController {
       });
 
       if (!project) {
-        return res.status(404).json({ error: 'Proyecto no encontrado' });
+        throw new NotFoundError('Proyecto');
       }
 
       // Transacción para limpiar mensajes y crear nuevo análisis inicial
@@ -1050,35 +928,27 @@ export class ProjectsController {
       try {
         const aiResponse = await conversationalWorkflowService.processUserMessage(id, analysis.trim());
         
-        return res.status(200).json({
-          status: 'success',
-          data: {
-            id: id,
-            message: 'Chat reiniciado y IA procesando',
-            aiResponse: aiResponse.aiResponse,
-            readyForAI: true
-          }
+        return ResponseHandler.success(res, {
+          id: id,
+          message: 'Chat reiniciado y IA procesando',
+          aiResponse: aiResponse.aiResponse,
+          readyForAI: true
         });
       } catch (aiError) {
         console.error('Error procesando respuesta IA:', aiError);
         
         // Si falla la IA, al menos devolver éxito del reinicio
-        return res.status(200).json({
-          status: 'success',
-          data: {
-            id: id,
-            message: 'Chat reiniciado, pero error procesando IA',
-            readyForAI: true
-          }
+        return ResponseHandler.success(res, {
+          id: id,
+          message: 'Chat reiniciado, pero error procesando IA',
+          readyForAI: true
         });
       }
 
     } catch (error) {
       console.error('RESTART CHAT ERROR:', error);
-      return res.status(500).json({
-        error: 'Error al reiniciar chat',
-        details: error instanceof Error ? error.message : String(error)
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error al reiniciar chat');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 }

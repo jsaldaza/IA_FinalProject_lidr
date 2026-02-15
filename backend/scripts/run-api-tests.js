@@ -74,7 +74,7 @@ async function waitForHealth(retries = 15, intervalMs = 1000) {
   const h = await waitForHealth(20, 1000);
   if (!h.ok) {
     console.error(
-      "Server /health did not respond after retries. Aborting tests."
+      "Server /health did not respond after retries. Aborting tests.",
     );
     process.exitCode = 2;
     return;
@@ -142,91 +142,44 @@ async function waitForHealth(retries = 15, intervalMs = 1000) {
     await save("04-create-project", r.status, r.headers, r.text);
     try {
       const json = JSON.parse(r.text);
-      projectId = json?.data?.id || json?.id || projectId;
+      projectId =
+        json?.data?.project?.id || json?.data?.id || json?.id || projectId;
     } catch {}
     console.log("Saved 04-create-project, id?", projectId);
   } catch (e) {
     console.error("Create project error", e);
   }
 
-  // 5) List projects
+  // 5) List projects (in-progress view)
   try {
-    const r = await req("GET", "/api/projects", { headers: authHeader });
-    await save("05-list-projects", r.status, r.headers, r.text);
-    console.log("Saved 05-list-projects");
+    const r = await req("GET", "/api/projects/in-progress", {
+      headers: authHeader,
+    });
+    await save("05-list-projects-in-progress", r.status, r.headers, r.text);
+    console.log("Saved 05-list-projects-in-progress");
   } catch (e) {
     console.error("List projects error", e);
   }
 
-  // 6) Create an analysis
-  let analysisId = process.env.ANALYSIS_ID || "";
-  try {
-    const r = await req("POST", "/api/analysis", {
-      headers: authHeader,
-      body: { requirement: "Requerimiento ejemplo desde script" },
-    });
-    await save("06-create-analysis", r.status, r.headers, r.text);
-    try {
-      const json = JSON.parse(r.text);
-      analysisId = json?.data?.id || json?.id || analysisId;
-    } catch {}
-    console.log("Saved 06-create-analysis, id?", analysisId);
-  } catch (e) {
-    console.error("Create analysis error", e);
-  }
-
-  // 7) List analyses
-  try {
-    const r = await req("GET", "/api/analysis", { headers: authHeader });
-    await save("07-list-analyses", r.status, r.headers, r.text);
-    console.log("Saved 07-list-analyses");
-  } catch (e) {
-    console.error("List analyses error", e);
-  }
-
-  // 8) Generate test cases from project (if projectId)
-  if (projectId) {
-    try {
-      const r = await req("POST", "/api/test-cases/generate", {
-        headers: authHeader,
-        body: { projectId },
-      });
-      await save("08-generate-testcases", r.status, r.headers, r.text);
-      console.log("Saved 08-generate-testcases");
-    } catch (e) {
-      console.error("Generate testcases error", e);
-    }
-  }
-
-  // 9) Call cost optimization health (public)
-  try {
-    const r = await req("GET", "/api/cost-optimization/health");
-    await save("09-cost-health", r.status, r.headers, r.text);
-    console.log("Saved 09-cost-health");
-  } catch (e) {
-    console.error("Cost health error", e);
-  }
-
-  // 10) Dashboard stats
+  // 6) Dashboard stats
   try {
     const r = await req("GET", "/api/dashboard/stats", { headers: authHeader });
-    await save("10-dashboard-stats", r.status, r.headers, r.text);
-    console.log("Saved 10-dashboard-stats");
+    await save("06-dashboard-stats", r.status, r.headers, r.text);
+    console.log("Saved 06-dashboard-stats");
   } catch (e) {
     console.error("Dashboard stats error", e);
   }
 
-  // 11) Try to chat with project if projectId
+  // 7) Project status details (if projectId)
   if (projectId) {
     try {
-      const r = await req("POST", `/api/projects/${projectId}/chat`, {
+      const r = await req("GET", `/api/projects/${projectId}/status`, {
         headers: authHeader,
-        body: { message: "Hola desde script" },
       });
-      await save("11-project-chat", r.status, r.headers, r.text);
-      console.log("Saved 11-project-chat");
+      await save("07-project-status", r.status, r.headers, r.text);
+      console.log("Saved 07-project-status");
     } catch (e) {
-      console.error("Project chat error", e);
+      console.error("Project status error", e);
     }
   }
 

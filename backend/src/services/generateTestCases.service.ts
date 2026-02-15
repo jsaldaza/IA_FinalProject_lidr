@@ -1,10 +1,10 @@
 // @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAI } from 'openai';
 import { configService } from './config.service';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 const { StructuredLogger } = require('../utils/structured-logger');
 
-const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: configService.getOpenAIConfig().apiKey });
 
 export interface TestCaseGenerationRequest {

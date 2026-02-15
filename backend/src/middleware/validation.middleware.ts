@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validationResult } from 'express-validator';
@@ -12,7 +13,8 @@ export const validateRequest = (config: { body?: z.ZodSchema; query?: z.ZodSchem
 
             if (config.query) {
                 const result = config.query.parse(req.query);
-                req.query = result;
+                // Express 5 exposes req.query via a getter; mutate in place to avoid setter errors
+                Object.assign(req.query, result);
             }
 
             if (config.params) {

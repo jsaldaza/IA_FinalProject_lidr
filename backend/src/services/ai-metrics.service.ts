@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { prisma } from '../lib/prisma';
 
 export interface AIUsageMetrics {
     totalRequests: number;

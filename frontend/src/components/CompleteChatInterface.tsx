@@ -3,12 +3,11 @@
  * Integra toda la funcionalidad del chat interactivo
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   VStack,
   HStack,
-  Input,
   Button,
   Text,
   Heading,
@@ -30,7 +29,7 @@ import {
   Alert,
   AlertIcon
 } from '@chakra-ui/react';
-import { FiSend, FiPlus, FiMessageSquare, FiCheck, FiClock } from 'react-icons/fi';
+import { FiSend, FiCheck, FiClock } from 'react-icons/fi';
 import { useApiMutation, useApiQuery } from '../hooks/useApi';
 
 interface Message {
@@ -144,7 +143,7 @@ export const CompleteChatInterface: React.FC<ChatInterfaceProps> = ({
         sendWelcomeMessage();
       }
     }
-  }, [chatData]);
+  }, [chatData, sendWelcomeMessage]);
 
   // Scroll automático
   useEffect(() => {
@@ -155,7 +154,7 @@ export const CompleteChatInterface: React.FC<ChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const sendWelcomeMessage = () => {
+  const sendWelcomeMessage = useCallback(() => {
     const welcomeMessage = `¡Hola! 👋 Soy tu asistente de análisis para "${project.title}".
 
 Vamos a trabajar juntos para definir completamente los requisitos de tu proyecto. Te haré preguntas específicas para entender:
@@ -176,7 +175,7 @@ Vamos a trabajar juntos para definir completamente los requisitos de tu proyecto
     };
     
     setMessages([assistantMessage]);
-  };
+  }, [project.title]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || isLoading) return;

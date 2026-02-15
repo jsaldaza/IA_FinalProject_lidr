@@ -9,6 +9,7 @@ import {
 } from '../../types/conversational.types';
 import { openAIService } from '../openai.service';
 import { conversationalDatabaseService } from './database.service';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ConversationalPersistenceService } from '../conversational-persistence.service';
 
 export class ConversationalWorkflowService {
@@ -450,8 +451,8 @@ Continúa la conversación de manera natural y profesional:`;
         };
       }
 
-    } catch (error) {
-      console.error('Error processing user message:', error);
+    } catch (_error) {
+      console.error('Error processing user message:', _error);
       
       // Fallback usando IA con contexto mínimo
       const fallbackQuestion = await this.generateNextQuestionWithAI(
@@ -474,8 +475,8 @@ Continúa la conversación de manera natural y profesional:`;
   async getAnalysisById(analysisId: string): Promise<ConversationalAnalysisEntity | null> {
     try {
       return await this.getAnalysis(analysisId);
-    } catch (error) {
-      console.error('Error getting analysis by ID:', error);
+    } catch (_error) {
+      console.error('Error getting analysis by ID:', _error);
       return null;
     }
   }
@@ -486,8 +487,8 @@ Continúa la conversación de manera natural y profesional:`;
   async getUserWorkflows(userId: string): Promise<ConversationalAnalysisEntity[]> {
     try {
       return await conversationalDatabaseService.getUserAnalyses(userId);
-    } catch (error) {
-      console.error('Error getting user workflows:', error);
+    } catch (_error) {
+      console.error('Error getting user workflows:', _error);
       
       // Fallback con análisis de demostración
       return [
@@ -541,8 +542,8 @@ Continúa la conversación de manera natural y profesional:`;
   async getAnalysisSummit(analysisId: string) {
     try {
       return await conversationalDatabaseService.getAnalysisSummit(analysisId);
-    } catch (error) {
-      console.error('Error retrieving analysis summit from DB:', error);
+    } catch (_error) {
+      console.error('Error retrieving analysis summit from DB:', _error);
       return null;
     }
   }
@@ -554,9 +555,9 @@ Continúa la conversación de manera natural y profesional:`;
     try {
       await conversationalDatabaseService.createAnalysisSummit(analysisId, summitData);
       return true;
-    } catch (error) {
-      console.error('Error creating analysis summit:', error);
-      throw error;
+    } catch (_error) {
+      console.error('Error creating analysis summit:', _error);
+      throw _error;
     }
   }
 
@@ -567,9 +568,9 @@ Continúa la conversación de manera natural y profesional:`;
     try {
       const updated = await conversationalDatabaseService.updateAnalysisSummit(analysisId, updates);
       return updated;
-    } catch (error) {
-      console.error('Error updating analysis summit:', error);
-      throw error;
+    } catch (_error) {
+      console.error('Error updating analysis summit:', _error);
+      throw _error;
     }
   }
 
@@ -647,9 +648,9 @@ Continúa la conversación de manera natural y profesional:`;
       analysis.updatedAt = new Date();
 
       return analysis;
-    } catch (error) {
+    } catch (_error) {
       // If analysis not found, return a mock successful completion
-      console.log(`⚠️ Analysis ${analysisId} not found, returning mock completion`);
+      console.log(`⚠️ Analysis ${analysisId} not found, returning mock completion`, _error);
       
       const mockCompletedAnalysis: ConversationalAnalysisEntity = {
         id: analysisId,

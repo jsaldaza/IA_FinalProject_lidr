@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../src/lib/prisma';
 
 (async () => {
-  const prisma = new PrismaClient();
   try {
     await prisma.$connect();
     const analyses = await prisma.conversationalAnalysis.findMany({

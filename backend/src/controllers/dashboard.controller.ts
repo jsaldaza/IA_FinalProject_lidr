@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { StructuredLogger } from '../utils/structured-logger';
 import { ResponseHandler } from '../utils/response-handler';
 import { RedisCache } from '../utils/redis-cache';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
+import { AppError, UnauthorizedError, InternalServerError } from '../utils/error-handler';
 
 // Extended Request interface for authenticated requests
 interface AuthRequest extends Request {
@@ -17,17 +17,19 @@ interface AuthRequest extends Request {
 }
 
 export class DashboardController {
+  private static getUserId(req: AuthRequest): string {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+    return userId;
+  }
   /**
    * Get dashboard statistics for authenticated user
    */
-  static async getStats(req: AuthRequest, res: Response): Promise<void> {
+  static async getStats(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        ResponseHandler.error(res, 'Usuario no autenticado', 401, 'AUTH_REQUIRED');
-        return;
-      }
+      const userId = DashboardController.getUserId(req);
 
       // Get query parameters
       const { period = 'week', includeInactive = false } = req.query;
@@ -45,12 +47,11 @@ export class DashboardController {
         const cachedStats = await RedisCache.getDashboardStats(userId);
         if (cachedStats) {
           StructuredLogger.info('Dashboard stats served from cache', { userId });
-          ResponseHandler.success(
+          return ResponseHandler.success(
             res,
             cachedStats,
             'Estadísticas del dashboard obtenidas desde caché'
           );
-          return;
         }
       }
 
@@ -71,7 +72,7 @@ export class DashboardController {
         stats
       });
 
-      ResponseHandler.success(
+      return ResponseHandler.success(
         res,
         stats,
         'Estadísticas del dashboard obtenidas exitosamente'
@@ -82,11 +83,16 @@ export class DashboardController {
         period: req.query.period
       });
 
-      ResponseHandler.error(
+      const appError = error instanceof AppError
+        ? error
+        : new InternalServerError('Error interno del servidor al obtener estadísticas');
+
+      return ResponseHandler.error(
         res,
-        'Error interno del servidor al obtener estadísticas',
-        500,
-        'INTERNAL_ERROR'
+        appError.message,
+        appError.statusCode,
+        appError.code,
+        appError.details
       );
     }
   }
@@ -94,14 +100,9 @@ export class DashboardController {
   /**
    * Get recent activity for authenticated user
    */
-  static async getActivity(req: AuthRequest, res: Response): Promise<void> {
+  static async getActivity(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        ResponseHandler.error(res, 'Usuario no autenticado', 401, 'AUTH_REQUIRED');
-        return;
-      }
+      const userId = DashboardController.getUserId(req);
 
       const { limit = 10, type = 'all' } = req.query;
       const limitNum = Math.min(parseInt(limit as string) || 10, 50); // Max 50
@@ -120,7 +121,7 @@ export class DashboardController {
         activityCount: activity.length
       });
 
-      ResponseHandler.success(
+      return ResponseHandler.success(
         res,
         activity,
         'Actividad reciente obtenida exitosamente'
@@ -131,11 +132,16 @@ export class DashboardController {
         limit: req.query.limit
       });
 
-      ResponseHandler.error(
+      const appError = error instanceof AppError
+        ? error
+        : new InternalServerError('Error interno del servidor al obtener actividad');
+
+      return ResponseHandler.error(
         res,
-        'Error interno del servidor al obtener actividad',
-        500,
-        'INTERNAL_ERROR'
+        appError.message,
+        appError.statusCode,
+        appError.code,
+        appError.details
       );
     }
   }
@@ -143,14 +149,9 @@ export class DashboardController {
   /**
    * Get recent projects for authenticated user
    */
-  static async getRecentProjects(req: AuthRequest, res: Response): Promise<void> {
+  static async getRecentProjects(req: AuthRequest, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        ResponseHandler.error(res, 'Usuario no autenticado', 401, 'AUTH_REQUIRED');
-        return;
-      }
+      const userId = DashboardController.getUserId(req);
 
       const { limit = 5, status = 'all' } = req.query;
       const limitNum = Math.min(parseInt(limit as string) || 5, 20); // Max 20
@@ -168,12 +169,11 @@ export class DashboardController {
         const cachedProjects = await RedisCache.get<any[]>(cacheKey);
         if (cachedProjects && Array.isArray(cachedProjects)) {
           StructuredLogger.info('Recent projects served from cache', { userId, count: cachedProjects.length });
-          ResponseHandler.success(
+          return ResponseHandler.success(
             res,
             cachedProjects,
             'Proyectos recientes obtenidos desde caché'
           );
-          return;
         }
       }
 
@@ -208,7 +208,7 @@ export class DashboardController {
         projectsCount: recentProjects.length
       });
 
-      ResponseHandler.success(
+      return ResponseHandler.success(
         res,
         recentProjects,
         'Proyectos recientes obtenidos exitosamente'
@@ -219,11 +219,16 @@ export class DashboardController {
         limit: req.query.limit
       });
 
-      ResponseHandler.error(
+      const appError = error instanceof AppError
+        ? error
+        : new InternalServerError('Error interno del servidor al obtener proyectos recientes');
+
+      return ResponseHandler.error(
         res,
-        'Error interno del servidor al obtener proyectos recientes',
-        500,
-        'INTERNAL_ERROR'
+        appError.message,
+        appError.statusCode,
+        appError.code,
+        appError.details
       );
     }
   }

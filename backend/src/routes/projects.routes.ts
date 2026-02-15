@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { projectsController } from '../controllers/projects.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { TokenCostControlMiddleware } from '../middleware/token-cost-control.middleware';
-import { validateRequest, validateUuidParam, validateObjectIdParam } from '../middleware/validation.enhanced';
+import { validateRequest, validateObjectIdParam } from '../middleware/validation.enhanced';
 import { ProjectValidation } from '../validations/projects.validation';
 
 console.log('🔧 Cargando projects.routes.ts (API Unificada)...');

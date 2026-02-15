@@ -163,7 +163,12 @@ export class CircuitBreakerFactory {
       this.breakers.set(serviceName, new CircuitBreaker(finalConfig, serviceName));
     }
 
-    return this.breakers.get(serviceName)!;
+    const breaker = this.breakers.get(serviceName);
+    if (!breaker) {
+      throw new Error(`Circuit breaker ${serviceName} not initialized`);
+    }
+
+    return breaker;
   }
 
   static getAllBreakers(): Map<string, CircuitBreaker> {

@@ -1,6 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AnalysisCacheService } from './analysis-cache.service';
 import { TokenCostControlMiddleware } from '../middleware/token-cost-control.middleware';
+import { prisma } from '../lib/prisma';
 
 export interface ProjectMetrics {
   totalProjects: number;
@@ -35,7 +36,6 @@ export interface ProjectHealth {
 }
 
 export class ProjectMetricsService {
-  private static prisma = new PrismaClient();
 
   /**
    * Obtener métricas completas de proyectos para un usuario
@@ -44,9 +44,9 @@ export class ProjectMetricsService {
     try {
       // Obtener datos básicos de proyectos
       const [totalProjects, totalConversational, completedAnalyses] = await Promise.all([
-        this.prisma.project.count({ where: { userId } }),
-        this.prisma.conversationalAnalysis.count({ where: { userId } }),
-        this.prisma.analysis.count({
+        prisma.project.count({ where: { userId } }),
+        prisma.conversationalAnalysis.count({ where: { userId } }),
+        prisma.analysis.count({
           where: {
             userId,
             status: 'COMPLETED'
@@ -55,7 +55,7 @@ export class ProjectMetricsService {
       ]);
 
       // Obtener análisis recientes para calcular tiempo promedio
-      const recentAnalyses = await this.prisma.analysis.findMany({
+      const recentAnalyses = await prisma.analysis.findMany({
         where: {
           userId,
           status: 'COMPLETED',
@@ -93,13 +93,13 @@ export class ProjectMetricsService {
       // Métricas de actividad semanal
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const [analysesThisWeek, projectsThisWeek] = await Promise.all([
-        this.prisma.analysis.count({
+        prisma.analysis.count({
           where: {
             userId,
             createdAt: { gte: weekAgo }
           }
         }),
-        this.prisma.project.count({
+        prisma.project.count({
           where: {
             userId,
             createdAt: { gte: weekAgo }
@@ -210,7 +210,7 @@ export class ProjectMetricsService {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
       // Obtener proyectos por día
-      const projectsByDay = await this.prisma.project.groupBy({
+      const projectsByDay = await prisma.project.groupBy({
         by: ['createdAt'],
         where: {
           userId,
@@ -220,7 +220,7 @@ export class ProjectMetricsService {
       });
 
       // Obtener análisis completados por día
-      const analysesByDay = await this.prisma.analysis.groupBy({
+      const analysesByDay = await prisma.analysis.groupBy({
         by: ['createdAt'],
         where: {
           userId,
@@ -392,6 +392,6 @@ export class ProjectMetricsService {
   }
 
   static async disconnect(): Promise<void> {
-    await this.prisma.$disconnect();
+    await prisma.$disconnect();
   }
 }

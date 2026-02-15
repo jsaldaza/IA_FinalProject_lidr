@@ -10,7 +10,6 @@ import {
   CardHeader,
   Text,
   Badge,
-  Button,
   ButtonGroup,
   Skeleton,
   useColorModeValue,
@@ -21,8 +20,7 @@ import {
   Menu,
   MenuButton,
   MenuList,
-  MenuItem,
-  useDisclosure
+  MenuItem
 } from '@chakra-ui/react';
 import { 
   FiEdit2, 
@@ -30,7 +28,6 @@ import {
   FiMessageCircle, 
   FiMoreVertical,
   FiClock,
-  FiUser,
   FiActivity
 } from 'react-icons/fi';
 import { formatDistanceToNow } from 'date-fns';

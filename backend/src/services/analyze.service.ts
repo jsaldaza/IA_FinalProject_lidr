@@ -1,8 +1,7 @@
 // @ts-nocheck
 import { openAIService } from './openai.service';
-import { PrismaClient, AnalysisStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { AnalysisStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export async function analyzeRequirement(requirement: string, userId: string, projectId?: string) {
   if (!requirement || typeof requirement !== 'string') {

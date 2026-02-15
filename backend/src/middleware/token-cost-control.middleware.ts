@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response, NextFunction } from 'express';
 import { RedisClientType } from 'redis';
 import { StructuredLogger } from '../utils/structured-logger';
-
 // Configuración de límites diarios
 const DAILY_TOKEN_LIMITS = {
   FREE_USER: 2000,    // ~$0.06/día para usuarios gratuitos

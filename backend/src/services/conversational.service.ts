@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { conversationalDatabaseService } from './conversational/database.service';
 import { ConversationalWorkflowService } from './conversational/workflow.service';
 import { ConversationalAnalysisEntity } from '../types/conversational.types';

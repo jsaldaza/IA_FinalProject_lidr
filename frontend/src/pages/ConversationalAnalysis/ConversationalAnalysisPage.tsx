@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -105,11 +105,7 @@ const ConversationalAnalysisPage: React.FC = () => {
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const emptyBgColor = useColorModeValue('gray.50', 'gray.900');
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             await Promise.all([loadAnalyses(), loadProjects()]);
         } catch (error) {
@@ -117,9 +113,13 @@ const ConversationalAnalysisPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [loadAnalyses, loadProjects]);
 
-    const loadAnalyses = async () => {
+    useEffect(() => {
+        void loadData();
+    }, [loadData]);
+
+    const loadAnalyses = useCallback(async () => {
         try {
             const analyses = await conversationalWorkflowService.getUserWorkflows();
             setAnalyses(analyses.map(analysis => ({
@@ -136,9 +136,9 @@ const ConversationalAnalysisPage: React.FC = () => {
                 isClosable: true,
             });
         }
-    };
+    }, [toast]);
 
-    const loadProjects = async () => {
+    const loadProjects = useCallback(async () => {
         try {
             // Use the projects API wrapper which normalizes backend response shapes
             const result = await (await import('../../lib/api')).projects.getInProgress();
@@ -151,7 +151,7 @@ const ConversationalAnalysisPage: React.FC = () => {
         } catch (error) {
             console.error('Error loading projects:', error);
         }
-    };
+    }, []);
 
     const handleCreateAnalysis = async () => {
         if (!newAnalysis.title || !newAnalysis.description || !newAnalysis.epicContent) {

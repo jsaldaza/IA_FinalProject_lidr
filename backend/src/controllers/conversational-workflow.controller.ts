@@ -1,6 +1,9 @@
 // @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { Request, Response } from 'express';
 import { conversationalWorkflowService } from '../services/conversational/workflow.service';
+import { ResponseHandler } from '../utils/response-handler';
+import { AppError, UnauthorizedError, ValidationError, InternalServerError } from '../utils/error-handler';
 const { StructuredLogger } = require('../utils/structured-logger');
 
 StructuredLogger.info('🚀 INICIO: Cargando archivo conversational-workflow.controller.ts');
@@ -24,6 +27,13 @@ interface ReopenAnalysisRequest {
 }
 
 export class ConversationalWorkflowController {
+  private getUserId(req: Request): string {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+    return userId;
+  }
 
   /**
    * POST /api/conversational-workflow
@@ -31,15 +41,12 @@ export class ConversationalWorkflowController {
    */
   async createWorkflow(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id || 'demo-user';
+      const userId = this.getUserId(req);
 
       const { projectId, title, description, epicContent }: StartConversationRequest = req.body;
 
       if (!title || !description || !epicContent) {
-        return res.status(400).json({
-          success: false,
-          error: 'Título, descripción y contenido del épico son requeridos'
-        });
+        throw new ValidationError('Título, descripción y contenido del épico son requeridos');
       }
 
       // Crear workflow conversacional usando el servicio
@@ -53,14 +60,10 @@ export class ConversationalWorkflowController {
 
   StructuredLogger.info('✅ Flujo conversacional creado', { workflowId: createdWorkflow.id, userId });
 
-        return res.status(201).json({
-          success: true,
-          data: createdWorkflow,
-          message: 'Flujo conversacional creado exitosamente'
-        });
+        return ResponseHandler.created(res, createdWorkflow, 'Flujo conversacional creado exitosamente');
 
-      } catch (serviceError) {
-        StructuredLogger.warn('Error en servicio, creando workflow mock', { projectId });
+      } catch (error) {
+        StructuredLogger.warn('Error en servicio, creando workflow mock', { projectId, error: (error as Error)?.message });
 
         // Obtener información del proyecto si se proporcionó
         let projectInfo = null;
@@ -174,18 +177,12 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
           updatedAt: new Date().toISOString()
         };
 
-        return res.status(201).json({
-          success: true,
-          data: mockWorkflow,
-          message: 'Flujo conversacional creado exitosamente'
-        });
+        return ResponseHandler.created(res, mockWorkflow, 'Flujo conversacional creado exitosamente');
       }
     } catch (error) {
       StructuredLogger.error('Error creating conversational workflow', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -195,13 +192,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async sendMessage(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: 'Usuario no autenticado'
-        });
-      }
+      const userId = this.getUserId(req);
 
       const { id } = req.params;
       const body = req.body as SendMessageRequest;
@@ -216,10 +207,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
       }
 
       if (!messageContent || messageContent.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'El mensaje no puede estar vacío'
-        });
+        throw new ValidationError('El mensaje no puede estar vacío');
       }
 
       // 🤖 Usar el servicio conversacional real con IA
@@ -231,16 +219,11 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
         userId: userId 
       });
 
-      return res.status(200).json({
-        success: true,
-        data: response
-      });
+      return ResponseHandler.success(res, response);
     } catch (error) {
   StructuredLogger.error('Error sending message', error, { workflowId: req.params?.id, userId: req.user?.id });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -250,13 +233,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async submitPhase(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: 'Usuario no autenticado'
-        });
-      }
+      this.getUserId(req);
 
       const { id } = req.params;
 
@@ -294,17 +271,11 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
 
   StructuredLogger.info('Fase enviada para flujo', { workflowId: req.params?.id || 'unknown', phase: analysis.currentPhase });
 
-      return res.status(200).json({
-        success: true,
-        data: analysis,
-        message: 'Fase finalizada correctamente. Ya puedes avanzar a la siguiente etapa.'
-      });
+      return ResponseHandler.success(res, analysis, 'Fase finalizada correctamente. Ya puedes avanzar a la siguiente etapa.');
   } catch (error) {
   StructuredLogger.error('Error submitting phase', error as Error, { workflowId: req.params?.id || 'unknown' });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -322,11 +293,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
 
   StructuredLogger.info('Flujo avanzado a fase', { workflowId: req.params?.id || 'unknown', phase: analysis.currentPhase });
 
-        return res.status(200).json({
-          success: true,
-          data: analysis,
-          message: `Avanzado exitosamente a la fase: ${analysis.currentPhase}`
-        });
+        return ResponseHandler.success(res, analysis, `Avanzado exitosamente a la fase: ${analysis.currentPhase}`);
 
       } catch (serviceError) {
   StructuredLogger.warn('Error en servicio, usando fallback para avanzar fase', { workflowId: req.params?.id });
@@ -350,19 +317,15 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
           updatedAt: new Date().toISOString()
         };
 
-        return res.status(200).json({
-          success: true,
-          data: mockAnalysis,
-          message: `Avanzado exitosamente a la fase: ${mockAnalysis.currentPhase}`
-        });
+        StructuredLogger.warn('Error en servicio, usando fallback para completar análisis', { workflowId: req.params?.id, error: serviceError });
+
+        return ResponseHandler.success(res, mockAnalysis, `Avanzado exitosamente a la fase: ${mockAnalysis.currentPhase}`);
       }
 
     } catch (error) {
   StructuredLogger.error('Error advancing phase', error as Error, { workflowId: req.params?.id || 'unknown' });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -372,13 +335,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async reopenAnalysis(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: 'Usuario no autenticado'
-        });
-      }
+      const userId = this.getUserId(req);
 
       const { id } = req.params;
       const { reason }: ReopenAnalysisRequest = req.body;
@@ -387,17 +344,11 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
 
   StructuredLogger.info('Flujo reabierto para edición', { workflowId: req.params?.id || 'unknown' });
 
-      return res.status(200).json({
-        success: true,
-        data: analysis,
-        message: 'Análisis reabierto correctamente. Puedes continuar la conversación.'
-      });
+      return ResponseHandler.success(res, analysis, 'Análisis reabierto correctamente. Puedes continuar la conversación.');
     } catch (error) {
   StructuredLogger.error('Error reopening analysis', error as Error, { workflowId: req.params?.id || 'unknown' });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -407,13 +358,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async getAnalysisStatus(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          error: 'Usuario no autenticado'
-        });
-      }
+      this.getUserId(req);
 
       const { id } = req.params;
 
@@ -445,7 +390,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
             project: { id: analysis.projectId, name: null }
           };
 
-          return res.status(200).json({ success: true, data: apiResp });
+          return ResponseHandler.success(res, apiResp);
         }
 
         // If no DB entry found, fall back to the mock (development convenience)
@@ -477,13 +422,11 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
         messagesCount: 0
       };
 
-      return res.status(200).json({ success: true, data: mockStatus });
+      return ResponseHandler.success(res, mockStatus);
   } catch (error) {
   StructuredLogger.error('Error getting analysis status', error as Error, { workflowId: req.params?.id || 'unknown' });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -492,17 +435,14 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async getUserWorkflows(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id || 'demo-user';
+      const userId = this.getUserId(req);
 
       try {
         const workflows = await conversationalWorkflowService.getUserWorkflows(userId);
 
   StructuredLogger.info('Obtenidos workflows para usuario', { userId: req.user?.id || 'unknown', count: workflows.length });
 
-        return res.status(200).json({
-          success: true,
-          data: workflows
-        });
+        return ResponseHandler.success(res, workflows);
 
         } catch (serviceError) {
           StructuredLogger.warn('Error en servicio, devolviendo workflows mock', { userId });
@@ -556,18 +496,13 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
           }
         ];
 
-        return res.status(200).json({
-          success: true,
-          data: mockWorkflows
-        });
+        return ResponseHandler.success(res, mockWorkflows);
       }
       } catch (error) {
         const userId = req.user?.id || 'unknown';
         StructuredLogger.error('Error getting user workflows', error as Error, { userId });
-        return res.status(500).json({
-          success: false,
-          error: 'Error interno del servidor'
-        });
+        const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+        return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -577,7 +512,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async getUserInProgressWorkflows(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id || 'demo-user';
+      const userId = this.getUserId(req);
 
       try {
         const workflows = await conversationalWorkflowService.getUserWorkflows(userId);
@@ -616,33 +551,26 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
           completeness: workflow.completeness?.overallScore || 0
         }));
 
-        return res.status(200).json({
-          success: true,
-          data: {
-            items: transformedWorkflows,
-            pagination: {
-              total: transformedWorkflows.length,
-              page: 1,
-              limit: transformedWorkflows.length,
-              totalPages: 1
-            }
+        return ResponseHandler.success(res, {
+          items: transformedWorkflows,
+          pagination: {
+            total: transformedWorkflows.length,
+            page: 1,
+            limit: transformedWorkflows.length,
+            totalPages: 1
           }
         });
 
       } catch (serviceError) {
         StructuredLogger.error('Error obteniendo workflows en progreso', serviceError as Error, { userId });
-        return res.status(500).json({
-          success: false,
-          error: 'Error al obtener workflows en progreso'
-        });
+        const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener workflows en progreso');
+        return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
       }
     } catch (error) {
       const userId = req.user?.id || 'unknown';
       StructuredLogger.error('GET IN PROGRESS WORKFLOWS ERROR', error as Error, { userId });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -652,7 +580,7 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async getUserCompletedWorkflows(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id || 'demo-user';
+      const userId = this.getUserId(req);
 
       try {
         const workflows = await conversationalWorkflowService.getUserWorkflows(userId);
@@ -695,33 +623,26 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
           };
         });
 
-        return res.status(200).json({
-          success: true,
-          data: {
-            items: transformedWorkflows,
-            pagination: {
-              total: transformedWorkflows.length,
-              page: 1,
-              limit: transformedWorkflows.length,
-              totalPages: 1
-            }
+        return ResponseHandler.success(res, {
+          items: transformedWorkflows,
+          pagination: {
+            total: transformedWorkflows.length,
+            page: 1,
+            limit: transformedWorkflows.length,
+            totalPages: 1
           }
         });
 
       } catch (serviceError) {
         StructuredLogger.error('Error obteniendo workflows completados', serviceError as Error, { userId });
-        return res.status(500).json({
-          success: false,
-          error: 'Error al obtener workflows completados'
-        });
+        const appError = error instanceof AppError ? error : new InternalServerError('Error al obtener workflows completados');
+        return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
       }
     } catch (error) {
       const userId = req.user?.id || 'unknown';
       StructuredLogger.error('GET COMPLETED WORKFLOWS ERROR', error as Error, { userId });
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -731,15 +652,11 @@ Esta información me ayudará a hacer preguntas más específicas y relevantes p
    */
   async createAndStartWorkflow(req: Request, res: Response): Promise<Response> {
     try {
-      const userId = req.user?.id || 'demo-user';
-      
-  const { title, description } = req.body;
+      const userId = this.getUserId(req);
+      const { title, description } = req.body;
 
       if (!title || !description) {
-        return res.status(400).json({
-          success: false,
-          error: 'Título y descripción son requeridos'
-        });
+        throw new ValidationError('Título y descripción son requeridos');
       }
 
       // Generar epicContent automáticamente a partir del título y descripción
@@ -761,36 +678,30 @@ Realizar un análisis conversacional completo para identificar requisitos, defin
 
   StructuredLogger.info('Workflow conversacional creado y iniciado', { workflowId: createdWorkflow.id });
 
-      return res.status(201).json({
-        success: true,
-        message: 'Workflow conversacional creado exitosamente',
-        data: {
-          chatId: createdWorkflow.id,
+      return ResponseHandler.created(res, {
+        chatId: createdWorkflow.id,
+        title: createdWorkflow.title,
+        status: createdWorkflow.status,
+        currentPhase: createdWorkflow.currentPhase,
+        project: {
+          id: createdWorkflow.id,
           title: createdWorkflow.title,
+          description: createdWorkflow.description,
           status: createdWorkflow.status,
           currentPhase: createdWorkflow.currentPhase,
-          project: {
-            id: createdWorkflow.id,
-            title: createdWorkflow.title,
-            description: createdWorkflow.description,
-            status: createdWorkflow.status,
-            currentPhase: createdWorkflow.currentPhase,
-            createdAt: createdWorkflow.createdAt
-          },
-          initialMessage: {
-            role: 'ASSISTANT',
-            content: 'Hola! Voy a ayudarte a analizar tu proyecto. Empecemos explorando los requisitos en detalle.',
-            timestamp: new Date().toISOString()
-          }
+          createdAt: createdWorkflow.createdAt
+        },
+        initialMessage: {
+          role: 'ASSISTANT',
+          content: 'Hola! Voy a ayudarte a analizar tu proyecto. Empecemos explorando los requisitos en detalle.',
+          timestamp: new Date().toISOString()
         }
-      });
+      }, 'Workflow conversacional creado exitosamente');
 
     } catch (error) {
       StructuredLogger.error('CREATE AND START WORKFLOW ERROR', error as Error);
-      return res.status(500).json({
-        success: false,
-        error: 'Error interno del servidor al crear workflow'
-      });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor al crear workflow');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -803,10 +714,11 @@ Realizar un análisis conversacional completo para identificar requisitos, defin
     try {
       const summit = await conversationalWorkflowService.getAnalysisSummit(id);
 
-      return res.status(200).json({ success: true, data: summit });
+      return ResponseHandler.success(res, summit);
     } catch (error) {
       StructuredLogger.error('Error getting analysis summit', error as Error, { workflowId: id });
-      return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -817,17 +729,17 @@ Realizar un análisis conversacional completo para identificar requisitos, defin
   async createAnalysisSummit(req: Request, res: Response): Promise<Response> {
     const { id } = req.params;
     try {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
+      this.getUserId(req);
 
       const summitData = req.body;
 
       await conversationalWorkflowService.createAnalysisSummit(id, summitData);
 
-      return res.status(201).json({ success: true, message: 'Analysis summit creado' });
+      return ResponseHandler.created(res, { message: 'Analysis summit creado' });
     } catch (error) {
       StructuredLogger.error('Error creating analysis summit', error as Error, { workflowId: id });
-      return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -849,16 +761,17 @@ Realizar un análisis conversacional completo para identificar requisitos, defin
       const dryRunResults = await db.purgeOldMessagesForCompletedAnalyses({ dryRun: true, keepLastUser });
 
       if (!confirm) {
-        return res.status(200).json({ success: true, dryRun: true, data: dryRunResults });
+        return ResponseHandler.success(res, { dryRun: true, data: dryRunResults });
       }
 
       // Perform actual purge
       const execResults = await db.purgeOldMessagesForCompletedAnalyses({ dryRun: false, keepLastUser });
 
-      return res.status(200).json({ success: true, dryRun: false, data: execResults });
+      return ResponseHandler.success(res, { dryRun: false, data: execResults });
     } catch (error) {
       StructuredLogger.error('Error purging completed messages', error as Error);
-      return res.status(500).json({ success: false, error: 'Error interno purgando mensajes' });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno purgando mensajes');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -880,15 +793,16 @@ Realizar un análisis conversacional completo para identificar requisitos, defin
       // dry-run first
       const dry = await db.purgeMessagesForAnalysis(id, { dryRun: true, keepLastAssistant, keepLastUser });
       if (!confirm) {
-        return res.status(200).json({ success: true, dryRun: true, data: dry });
+        return ResponseHandler.success(res, { dryRun: true, data: dry });
       }
 
       // execute
       const exec = await db.purgeMessagesForAnalysis(id, { dryRun: false, keepLastAssistant, keepLastUser });
-      return res.status(200).json({ success: true, dryRun: false, data: exec });
+      return ResponseHandler.success(res, { dryRun: false, data: exec });
     } catch (error) {
       StructuredLogger.error('Error purging messages for analysis', error as Error, { workflowId: req.params?.id });
-      return res.status(500).json({ success: false, error: 'Error interno purgando mensajes del análisis' });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno purgando mensajes del análisis');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 
@@ -899,17 +813,17 @@ Realizar un análisis conversacional completo para identificar requisitos, defin
   async updateAnalysisSummit(req: Request, res: Response): Promise<Response> {
     const { id } = req.params;
     try {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ success: false, error: 'Usuario no autenticado' });
+      this.getUserId(req);
 
       const updates = req.body;
 
       const updated = await conversationalWorkflowService.updateAnalysisSummit(id, updates);
 
-      return res.status(200).json({ success: true, data: updated, message: 'Analysis summit actualizado' });
+      return ResponseHandler.success(res, updated, 'Analysis summit actualizado');
     } catch (error) {
       StructuredLogger.error('Error updating analysis summit', error as Error, { workflowId: id });
-      return res.status(500).json({ success: false, error: 'Error interno del servidor' });
+      const appError = error instanceof AppError ? error : new InternalServerError('Error interno del servidor');
+      return ResponseHandler.error(res, appError.message, appError.statusCode, appError.code, appError.details);
     }
   }
 }

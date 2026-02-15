@@ -1,5 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { conversationalDatabaseService } from './conversational/database.service';
+import { prisma } from '../lib/prisma';
+import { NotFoundError } from '../utils/error-handler';
 
 export interface ProjectData {
   id: string;
@@ -26,11 +27,6 @@ export interface UpdateProjectData {
 }
 
 export class ProjectService {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   /**
    * Create a new project (draft)
@@ -61,7 +57,7 @@ export class ProjectService {
    * Get project by ID and user ID
    */
   async getProjectById(id: string, userId: string): Promise<ProjectData | null> {
-    const project = await this.prisma.conversationalAnalysis.findFirst({
+    const project = await prisma.conversationalAnalysis.findFirst({
       where: {
         id,
         userId
@@ -99,17 +95,17 @@ export class ProjectService {
     // Verify project exists and belongs to user
     const existing = await this.getProjectById(id, userId);
     if (!existing) {
-      throw new Error('Project not found or access denied');
+      throw new NotFoundError('Project');
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Partial<UpdateProjectData> = {};
     if (updates.title) updateData.title = updates.title;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.epicContent !== undefined) updateData.epicContent = updates.epicContent;
 
     // Update via Prisma
-    const result = await this.prisma.conversationalAnalysis.update({
+    const result = await prisma.conversationalAnalysis.update({
       where: { id },
       data: updateData
     });
@@ -134,11 +130,11 @@ export class ProjectService {
     // Verify project exists and belongs to user
     const existing = await this.getProjectById(id, userId);
     if (!existing) {
-      throw new Error('Project not found or access denied');
+      throw new NotFoundError('Project');
     }
 
     // Delete the project
-    await this.prisma.conversationalAnalysis.delete({
+    await prisma.conversationalAnalysis.delete({
       where: { id }
     });
   }
@@ -147,7 +143,7 @@ export class ProjectService {
    * Get projects in progress for user
    */
   async getProjectsInProgress(userId: string, limit: number = 20): Promise<ProjectData[]> {
-    const projects = await this.prisma.conversationalAnalysis.findMany({
+    const projects = await prisma.conversationalAnalysis.findMany({
       where: {
         userId,
         status: {
@@ -188,7 +184,7 @@ export class ProjectService {
    * Get completed projects for user
    */
   async getCompletedProjects(userId: string, limit: number = 20): Promise<ProjectData[]> {
-    const projects = await this.prisma.conversationalAnalysis.findMany({
+    const projects = await prisma.conversationalAnalysis.findMany({
       where: {
         userId,
         status: 'COMPLETED'
@@ -227,7 +223,7 @@ export class ProjectService {
    * Complete a project
    */
   async completeProject(id: string, userId: string): Promise<ProjectData> {
-    const updatedProject = await this.prisma.conversationalAnalysis.update({
+    const updatedProject = await prisma.conversationalAnalysis.update({
       where: {
         id,
         userId

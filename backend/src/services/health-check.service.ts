@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { RedisCache } from '../utils/redis-cache';
 import { StructuredLogger } from '../utils/structured-logger';
-import { ResponseHandler } from '../utils/error-handler';
-
-const prisma = new PrismaClient();
+import { ResponseHandler } from '../utils/response-handler';
+import { prisma } from '../lib/prisma';
 
 /**
  * Health Check Service con verificaciones detalladas
@@ -21,7 +19,7 @@ interface HealthCheckResult {
   name: string;
   status: 'healthy' | 'unhealthy' | 'degraded';
   responseTime?: number;
-  details?: any;
+  details?: unknown;
   error?: string;
 }
 

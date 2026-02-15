@@ -86,6 +86,10 @@ jobs:
         working-directory: backend
         run: npm ci --ignore-scripts
 
+      - name: 🛡️ Audit (prod only)
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: 🧬 Generate Prisma Client
         working-directory: backend
         run: npx prisma generate
@@ -126,12 +130,15 @@ jobs:
         working-directory: frontend
         run: npm ci --ignore-scripts
 
+      - name: 🛡️ Audit (prod only)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: 🔍 Lint
         working-directory: frontend
         run: npm run lint
 
       - name: 🧪 Tests
-        if: env.RUN_FRONTEND_TESTS == 'true'
         working-directory: frontend
         run: npm run test:run -- --passWithNoTests
 

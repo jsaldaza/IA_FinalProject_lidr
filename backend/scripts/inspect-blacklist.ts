@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+import { prisma } from '../src/lib/prisma';
 
 async function main() {
-  const prisma = new PrismaClient();
   try {
     await prisma.$connect();
     const rows = await prisma.blacklistedToken.findMany({ take: 50 });

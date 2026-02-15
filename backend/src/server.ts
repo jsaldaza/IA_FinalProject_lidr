@@ -1,6 +1,7 @@
+ 
 import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './lib/prisma';
 import { router as authRouter } from './routes/auth.routes';
 import { router as conversationalWorkflowRouter } from './routes/conversational-workflow.routes';
 import { router as dashboardRouter } from './routes/dashboard.routes';
@@ -17,7 +18,6 @@ import { swaggerSpec } from './config/swagger';
 import { RedisCache } from './utils/redis-cache';
 
 const app = express();
-const prisma = new PrismaClient();
 
 // Behind Railway/Vercel we must trust the proxy so rate limiting and IPs work correctly
 app.set('trust proxy', 1);
@@ -56,10 +56,10 @@ app.use(cors({
         
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
-        } else {
-            StructuredLogger.warn(`CORS: Blocked request from origin`, { origin } as any);
-            return callback(new Error('Not allowed by CORS'), false);
         }
+
+        StructuredLogger.warn('CORS: Blocked request from origin', { origin });
+        return callback(new Error('Not allowed by CORS'), false);
     },
     // Include PATCH so browser preflight permits PATCH requests
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

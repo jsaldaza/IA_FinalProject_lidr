@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Servicio de configuración centralizada
  * Valida y gestiona todas las variables de entorno y configuraciones del sistema

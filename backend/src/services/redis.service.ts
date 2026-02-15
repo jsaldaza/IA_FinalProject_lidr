@@ -60,7 +60,7 @@ export class CacheService {
     return null;
   }
 
-  async set(key: string, value: any, type?: string): Promise<boolean> {
+  async set(key: string, value: unknown): Promise<boolean> {
     if (!this.redis || !this.isRedisEnabled) return false;
 
     try {

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   status: 'success' | 'error';
   message?: string;
   data?: T;
@@ -20,7 +20,7 @@ export interface ApiError {
   status: 'error';
   message: string;
   code?: string;
-  details?: any;
+  details?: unknown;
   timestamp: string;
 }
 
@@ -57,7 +57,7 @@ export class ResponseHandler {
     message: string,
     statusCode: number = 500,
     code?: string,
-    details?: any
+    details?: unknown
   ): Response<ApiError> {
     const response: ApiError = {
       status: 'error',
