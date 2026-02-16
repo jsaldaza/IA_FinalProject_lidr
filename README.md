@@ -1,5 +1,7 @@
 # TestForge AI
 
+_Última actualización automática: 2026-02-15_
+
 Plataforma de testing asistida por IA: genera, gestiona y analiza casos de prueba a partir de requisitos conversacionales.
 
 ## Stack
