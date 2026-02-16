@@ -84,3 +84,5 @@ ISC
 
 ---
 _Última edición: 15 de febrero de 2026_
+
+> Documentación revisada y validada tras integración CI/CD.

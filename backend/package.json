@@ -57,7 +57,7 @@
     "prisma": "^5.20.0",
     "ts-jest": "^29.4.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",
