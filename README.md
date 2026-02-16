@@ -81,3 +81,6 @@ Consulta el índice unificado en [docs/README.md](docs/README.md) para arquitect
 
 ## Licencia
 ISC
+
+---
+_Última edición: 15 de febrero de 2026_
