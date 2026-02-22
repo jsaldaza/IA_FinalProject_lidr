@@ -72,14 +72,6 @@ jobs:
             ./backend/package-lock.json
             ./backend/package.json
 
-      - name: ℹ️ Env diagnostics (backend)
-        run: |
-          node -v
-          npm -v
-          pwd
-          ls -la
-          npx tsc -v
-
       - name: 🧾 Prepare test environment file
         working-directory: backend
         run: |
@@ -96,6 +88,14 @@ jobs:
       - name: 📦 Install dependencies
         working-directory: backend
         run: npm install --ignore-scripts
+
+      - name: ℹ️ Env diagnostics (backend)
+        run: |
+          node -v
+          npm -v
+          pwd
+          ls -la
+          npx tsc -v
 
       - name: 🛡️ Audit (prod only)
         working-directory: backend
