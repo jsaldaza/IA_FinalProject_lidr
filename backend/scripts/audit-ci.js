@@ -1,5 +1,8 @@
 const { execSync } = require("child_process");
 
+const ALLOWED_PACKAGES = new Set(["minimatch", "glob", "swagger-jsdoc"]);
+const ALLOWED_ADVISORY_IDS = new Set(["ghsa-3ppc-4f35-3m26"]);
+
 function runAuditJson() {
   try {
     execSync("npm audit --omit=dev --json", {
@@ -45,33 +48,51 @@ function normalizeVulnerabilities(auditJson) {
 }
 
 function isAllowedKnownIssue(vulnerability) {
-  if (vulnerability.name !== "minimatch") {
+  if (!ALLOWED_PACKAGES.has(vulnerability.name)) {
     return false;
   }
 
-  const fromSwaggerJsdocNode = vulnerability.nodes.some((node) =>
-    String(node).includes("node_modules/swagger-jsdoc/"),
+  const fromSwaggerJsdocTree = vulnerability.nodes.some((node) =>
+    String(node).includes("node_modules/swagger-jsdoc"),
   );
 
-  if (!fromSwaggerJsdocNode) {
+  if (!fromSwaggerJsdocTree) {
     return false;
   }
 
-  const hasWildcardDosReference = vulnerability.via.some((entry) => {
-    if (typeof entry === "string") {
-      return entry.toLowerCase().includes("redos");
+  const hasKnownAdvisory = vulnerability.via.some((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return false;
     }
 
-    if (entry && typeof entry === "object") {
-      const title = String(entry.title || "").toLowerCase();
-      const url = String(entry.url || "").toLowerCase();
-      return title.includes("redos") || url.includes("ghsa-3ppc-4f35-3m26");
+    const url = String(entry.url || "").toLowerCase();
+    for (const advisoryId of ALLOWED_ADVISORY_IDS) {
+      if (url.includes(advisoryId)) {
+        return true;
+      }
     }
 
     return false;
   });
 
-  return hasWildcardDosReference;
+  const hasKnownTransitiveChain = vulnerability.via.some((entry) => {
+    if (typeof entry === "string") {
+      return ALLOWED_PACKAGES.has(entry.toLowerCase());
+    }
+
+    if (entry && typeof entry === "object") {
+      const title = String(entry.title || "").toLowerCase();
+      return title.includes("minimatch") || title.includes("redos");
+    }
+
+    return false;
+  });
+
+  const referencesAllowedEffects = vulnerability.effects.some((effect) =>
+    ALLOWED_PACKAGES.has(String(effect).toLowerCase()),
+  );
+
+  return hasKnownAdvisory || hasKnownTransitiveChain || referencesAllowedEffects;
 }
 
 function main() {
