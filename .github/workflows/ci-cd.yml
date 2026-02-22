@@ -99,7 +99,7 @@ jobs:
 
       - name: 🛡️ Audit (prod only)
         working-directory: backend
-        run: npm audit --omit=dev --audit-level=high
+        run: npm run audit:ci
 
       - name: 🧬 Generate Prisma Client
         working-directory: backend

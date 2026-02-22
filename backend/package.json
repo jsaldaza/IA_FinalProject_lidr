@@ -29,6 +29,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
+    "audit:ci": "node scripts/audit-ci.js",
     "lint": "eslint src/**/*.ts --fix",
     "type-check": "tsc --noEmit"
   },
